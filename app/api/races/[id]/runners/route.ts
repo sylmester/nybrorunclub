@@ -28,12 +28,13 @@ export async function POST(
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const { data } = await supabaseAdmin
     .from("runners")
     .select("*")
-    .eq("race_id", params.id)
+    .eq("race_id", id)
     .order("bib_number");
   return NextResponse.json(data ?? []);
 }
