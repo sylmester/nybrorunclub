@@ -1,14 +1,38 @@
-export default function TimerPage({ params }: { params: { id: string } }) {
+import { supabaseAdmin } from "@/lib/supabase";
+import { notFound } from "next/navigation";
+import { Race, Runner, Lap } from "@/types";
+import TimerClient from "./TimerClient";
+
+export default async function TimerPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const { data: race } = await supabaseAdmin
+    .from("races")
+    .select("*")
+    .eq("id", params.id)
+    .single();
+
+  if (!race) notFound();
+
+  const { data: runners } = await supabaseAdmin
+    .from("runners")
+    .select("*")
+    .eq("race_id", params.id)
+    .order("bib_number");
+
+  const { data: laps } = await supabaseAdmin
+    .from("laps")
+    .select("*")
+    .eq("race_id", params.id)
+    .order("recorded_at", { ascending: true });
+
   return (
-    <main className="min-h-screen p-8 max-w-2xl mx-auto">
-      <a
-        href="/admin/dashboard"
-        className="text-sm text-gray-400 hover:text-gray-600 mb-6 inline-block"
-      >
-        ← Dashboard
-      </a>
-      <h1 className="text-3xl font-medium">Timer</h1>
-      <p className="text-gray-500 mt-2">Race ID: {params.id}</p>
-    </main>
+    <TimerClient
+      race={race as Race}
+      initialRunners={(runners ?? []) as Runner[]}
+      initialLaps={(laps ?? []) as Lap[]}
+    />
   );
 }
