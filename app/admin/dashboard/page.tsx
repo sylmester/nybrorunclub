@@ -1,26 +1,29 @@
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
+"use client";
+
+import { useEffect, useState } from "react";
 import { Race } from "@/types";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
-export default async function DashboardPage() {
-  const {
-    data: races,
-    error,
-    count,
-  } = await supabaseAdmin
-    .from("races")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+export default function DashboardPage() {
+  const [races, setRaces] = useState<Race[]>([]);
+  const router = useRouter();
 
-  console.log("count:", count);
-  console.log("races:", JSON.stringify(races));
-  console.log("error:", JSON.stringify(error));
+  async function fetchRaces() {
+    const res = await fetch("/api/races", { cache: "no-store" });
+    const data = await res.json();
+    setRaces(data);
+  }
+
+  useEffect(() => {
+    fetchRaces();
+  }, []);
 
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-medium">Dashboard ({count} races)</h1>
+          <h1 className="text-3xl font-medium">Dashboard</h1>
           <p className="text-gray-500 mt-1">Manage races</p>
         </div>
         <Link
