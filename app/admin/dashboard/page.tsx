@@ -3,16 +3,24 @@ import { Race } from "@/types";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const { data: races } = await supabaseAdmin
+  const {
+    data: races,
+    error,
+    count,
+  } = await supabaseAdmin
     .from("races")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
+
+  console.log("count:", count);
+  console.log("races:", JSON.stringify(races));
+  console.log("error:", JSON.stringify(error));
 
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-medium">Dashboard</h1>
+          <h1 className="text-3xl font-medium">Dashboard ({count} races)</h1>
           <p className="text-gray-500 mt-1">Manage races</p>
         </div>
         <Link
