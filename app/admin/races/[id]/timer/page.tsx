@@ -6,12 +6,14 @@ import TimerClient from "./TimerClient";
 export default async function TimerPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
+
   const { data: race } = await supabaseAdmin
     .from("races")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!race) notFound();
@@ -19,13 +21,13 @@ export default async function TimerPage({
   const { data: runners } = await supabaseAdmin
     .from("runners")
     .select("*")
-    .eq("race_id", params.id)
+    .eq("race_id", id)
     .order("bib_number");
 
   const { data: laps } = await supabaseAdmin
     .from("laps")
     .select("*")
-    .eq("race_id", params.id)
+    .eq("race_id", id)
     .order("recorded_at", { ascending: true });
 
   return (

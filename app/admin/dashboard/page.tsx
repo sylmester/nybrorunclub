@@ -1,9 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { Race } from "@/types";
 import Link from "next/link";
 
 export default async function DashboardPage() {
-  const { data: races } = await supabase
+  const { data: races } = await supabaseAdmin
     .from("races")
     .select("*")
     .order("created_at", { ascending: false });

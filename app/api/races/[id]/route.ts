@@ -4,8 +4,9 @@ import { NextResponse } from "next/server";
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const session = await getServerSession();
   if (!session)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -14,7 +15,7 @@ export async function PATCH(
   const { data, error } = await supabaseAdmin
     .from("races")
     .update(body)
-    .eq("id", params.id)
+    .eq("id", id)
     .select()
     .single();
 
