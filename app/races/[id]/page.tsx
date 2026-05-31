@@ -3,11 +3,17 @@ import { Race, Runner, Lap } from "@/types";
 import LiveLeaderboard from "./LiveLeaderboard";
 import { notFound } from "next/navigation";
 
-export default async function RacePage({ params }: { params: { id: string } }) {
+export default async function RacePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
   const { data: race } = await supabase
     .from("races")
     .select("*")
-    .eq("id", params.id)
+    .eq("id", id)
     .single();
 
   if (!race) notFound();
@@ -15,12 +21,12 @@ export default async function RacePage({ params }: { params: { id: string } }) {
   const { data: runners } = await supabase
     .from("runners")
     .select("*")
-    .eq("race_id", params.id);
+    .eq("race_id", id);
 
   const { data: laps } = await supabase
     .from("laps")
     .select("*")
-    .eq("race_id", params.id)
+    .eq("race_id", id)
     .order("recorded_at", { ascending: true });
 
   return (
