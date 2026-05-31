@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { Race, Runner, Lap } from "@/types";
-import LiveLeaderboard from "./LiveLeaderBoard";
+import LiveLeaderboard from "./LiveLeaderboard";
 import { notFound } from "next/navigation";
 
 export default async function RacePage({ params }: { params: { id: string } }) {
@@ -36,7 +36,6 @@ export default async function RacePage({ params }: { params: { id: string } }) {
         {new Date(race.date).toLocaleDateString("da-DK")} · {race.laps_count}{" "}
         laps · {race.lap_distance_m}m per lap
       </p>
-
       <LiveLeaderboard
         race={race as Race}
         initialRunners={(runners ?? []) as Runner[]}

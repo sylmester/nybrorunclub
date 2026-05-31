@@ -45,12 +45,10 @@ function buildLeaderboard(
       };
     })
     .sort((a, b) => {
-      // Finished runners first, sorted by finish time
       if (a.finished && b.finished)
         return (a.lastElapsed ?? 0) - (b.lastElapsed ?? 0);
       if (a.finished) return -1;
       if (b.finished) return 1;
-      // Then by laps completed desc, then by last elapsed asc
       if (b.lapsCompleted !== a.lapsCompleted)
         return b.lapsCompleted - a.lapsCompleted;
       return (a.lastElapsed ?? Infinity) - (b.lastElapsed ?? Infinity);
@@ -67,7 +65,6 @@ export default function LiveLeaderboard({
 
   useEffect(() => {
     if (race.status !== "active") return;
-
     const channel = supabase
       .channel(`laps-${race.id}`)
       .on(
@@ -83,7 +80,6 @@ export default function LiveLeaderboard({
         },
       )
       .subscribe();
-
     return () => {
       supabase.removeChannel(channel);
     };
@@ -103,7 +99,6 @@ export default function LiveLeaderboard({
           <span className="text-sm text-green-600 font-medium">Live</span>
         </div>
       )}
-
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-gray-400 border-b border-gray-100">
