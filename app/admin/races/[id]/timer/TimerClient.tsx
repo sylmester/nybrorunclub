@@ -35,15 +35,15 @@ export default function TimerClient({
     message: string;
     ok: boolean;
   } | null>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
   const bibRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  // Run the clock
   useEffect(() => {
     if (race.status !== "active" || !race.started_at) return;
-    const tick = () => {
+    const tick = () =>
       setElapsed(Date.now() - new Date(race.started_at!).getTime());
-    };
     tick();
     intervalRef.current = setInterval(tick, 100);
     return () => {
@@ -77,15 +77,13 @@ export default function TimerClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "finished" }),
     });
-    const updated = await res.json();
-    setRace(updated);
+    setRace(await res.json());
   }
 
   async function recordLap(e: React.FormEvent) {
     e.preventDefault();
     if (!bibInput.trim()) return;
     const currentElapsed = Date.now() - new Date(race.started_at!).getTime();
-
     const res = await fetch("/api/laps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -95,7 +93,6 @@ export default function TimerClient({
         elapsed_ms: currentElapsed,
       }),
     });
-
     if (res.ok) {
       const data = await res.json();
       setLaps((prev) => [...prev, data]);
@@ -109,7 +106,6 @@ export default function TimerClient({
     } else {
       showFeedback(`Bib #${bibInput} not found`, false);
     }
-
     setBibInput("");
     bibRef.current?.focus();
   }
@@ -134,7 +130,73 @@ export default function TimerClient({
     }
   }
 
-  // Build runner status table
+  async function removeRunner(runnerId: string, bibNumber: number) {
+    if (!confirm(`Remove bib #${bibNumber} from this race?`)) return;
+    await fetch(`/api/races/${race.id}/runners/${runnerId}`, {
+      method: "DELETE",
+    });
+    setRunners((prev) => prev.filter((r) => r.id !== runnerId));
+    setLaps((prev) => prev.filter((l) => l.runner_id !== runnerId));
+  }
+
+  async function undoLastLap(runnerId: string, bibNumber: number) {
+    const runnerLaps = laps.filter((l) => l.runner_id === runnerId);
+    if (!runnerLaps.length) return;
+    const lastLap = runnerLaps[runnerLaps.length - 1];
+    if (!confirm(`Undo last lap for bib #${bibNumber}?`)) return;
+    await fetch(`/api/laps/${lastLap.id}`, { method: "DELETE" });
+    setLaps((prev) => prev.filter((l) => l.id !== lastLap.id));
+  }
+
+  async function importCsv(e: React.ChangeEvent<HTMLInputElement>) {
+    setCsvError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const lines = text
+      .trim()
+      .split("\n")
+      .filter((l) => l.trim());
+
+    let imported = 0;
+    let errors = 0;
+
+    for (const line of lines) {
+      const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
+      const bib = parseInt(parts[0]);
+      const name = parts[1] || null;
+
+      if (isNaN(bib)) {
+        errors++;
+        continue;
+      }
+
+      const res = await fetch(`/api/races/${race.id}/runners`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bib_number: bib, name }),
+      });
+      if (res.ok) {
+        const runner = await res.json();
+        setRunners((prev) => {
+          const exists = prev.find((r) => r.id === runner.id);
+          if (exists) return prev;
+          return [...prev, runner].sort((a, b) => a.bib_number - b.bib_number);
+        });
+        imported++;
+      } else {
+        errors++;
+      }
+    }
+
+    if (fileRef.current) fileRef.current.value = "";
+    setCsvError(
+      errors > 0
+        ? `Imported ${imported} runners. ${errors} skipped (duplicate bib or invalid row).`
+        : `Imported ${imported} runners successfully.`,
+    );
+  }
+
   const runnerRows = runners
     .map((runner) => {
       const runnerLaps = laps.filter((l) => l.runner_id === runner.id);
@@ -144,6 +206,7 @@ export default function TimerClient({
         runner,
         lapsCompleted,
         lastElapsed: lastLap?.elapsed_ms ?? null,
+        lastLapId: lastLap?.id ?? null,
         finished: lapsCompleted >= race.laps_count,
       };
     })
@@ -166,7 +229,7 @@ export default function TimerClient({
         ← Dashboard
       </a>
 
-      {/* Race header */}
+      {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>
           <h1 className="text-3xl font-medium">{race.name}</h1>
@@ -203,7 +266,7 @@ export default function TimerClient({
         </div>
       </div>
 
-      {/* Bib input — only when active */}
+      {/* Bib input */}
       {race.status === "active" && (
         <form onSubmit={recordLap} className="mb-8">
           <label className="text-sm text-gray-500 mb-2 block">
@@ -236,10 +299,12 @@ export default function TimerClient({
         </form>
       )}
 
-      {/* Add runners — only when pending */}
+      {/* Add runners + CSV import */}
       {race.status === "pending" && (
-        <div className="mb-8 p-4 border border-gray-200 rounded-lg">
-          <h2 className="font-medium mb-3">Add runners</h2>
+        <div className="mb-8 p-4 border border-gray-200 rounded-lg space-y-4">
+          <h2 className="font-medium">Add runners</h2>
+
+          {/* Manual add */}
           <form onSubmit={addRunner} className="flex gap-2">
             <input
               type="number"
@@ -263,10 +328,28 @@ export default function TimerClient({
               Add
             </button>
           </form>
+
+          {/* CSV import */}
+          <div>
+            <p className="text-sm text-gray-500 mb-1">
+              Or import from CSV{" "}
+              <span className="text-gray-400">(columns: bib_number, name)</span>
+            </p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv"
+              onChange={importCsv}
+              className="text-sm text-gray-600"
+            />
+            {csvError && (
+              <p className="text-sm mt-1 text-blue-600">{csvError}</p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Runner status table */}
+      {/* Runner table */}
       {runners.length > 0 && (
         <table className="w-full text-sm">
           <thead>
@@ -276,6 +359,7 @@ export default function TimerClient({
               <th className="pb-2">Name</th>
               <th className="pb-2 text-right">Laps</th>
               <th className="pb-2 text-right">Time</th>
+              <th className="pb-2 w-20"></th>
             </tr>
           </thead>
           <tbody>
@@ -296,6 +380,31 @@ export default function TimerClient({
                 <td className="py-3 text-right font-mono">
                   {row.lastElapsed ? formatTime(row.lastElapsed) : "—"}
                 </td>
+                <td className="py-3 text-right">
+                  <div className="flex justify-end gap-2">
+                    {race.status === "active" && row.lapsCompleted > 0 && (
+                      <button
+                        onClick={() =>
+                          undoLastLap(row.runner.id, row.runner.bib_number)
+                        }
+                        className="text-xs text-amber-500 hover:text-amber-700"
+                        title="Undo last lap"
+                      >
+                        Undo
+                      </button>
+                    )}
+                    {race.status === "pending" && (
+                      <button
+                        onClick={() =>
+                          removeRunner(row.runner.id, row.runner.bib_number)
+                        }
+                        className="text-xs text-red-400 hover:text-red-600"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -303,7 +412,7 @@ export default function TimerClient({
       )}
 
       {race.status === "pending" && runners.length === 0 && (
-        <p className="text-gray-400 text-sm">
+        <p className="text-gray-400 text-sm mt-4">
           Add at least one runner before starting.
         </p>
       )}

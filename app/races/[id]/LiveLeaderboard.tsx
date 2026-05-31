@@ -87,6 +87,25 @@ export default function LiveLeaderboard({
 
   const leaderboard = buildLeaderboard(runners, laps, race.laps_count);
 
+  function exportCsv() {
+    const headers = ["Position", "Bib", "Name", "Laps completed", "Time"];
+    const rows = leaderboard.map((row, i) => [
+      i + 1,
+      row.runner.bib_number,
+      row.runner.name ?? "",
+      `${row.lapsCompleted}/${race.laps_count}`,
+      row.lastElapsed ? formatTime(row.lastElapsed) : "",
+    ]);
+    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${race.name.replace(/\s+/g, "_")}_results.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (!runners.length) {
     return <p className="text-gray-400">No runners registered yet.</p>;
   }
@@ -99,6 +118,23 @@ export default function LiveLeaderboard({
           <span className="text-sm text-green-600 font-medium">Live</span>
         </div>
       )}
+      <div className="flex justify-between items-center mb-4">
+        {race.status === "active" && (
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-sm text-green-600 font-medium">Live</span>
+          </div>
+        )}
+        {race.status !== "active" && <div />}
+        {leaderboard.length > 0 && (
+          <button
+            onClick={exportCsv}
+            className="text-sm text-gray-500 hover:text-black transition-colors"
+          >
+            Export CSV ↓
+          </button>
+        )}
+      </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-left text-gray-400 border-b border-gray-100">

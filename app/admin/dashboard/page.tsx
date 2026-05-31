@@ -19,6 +19,15 @@ export default function DashboardPage() {
     fetchRaces();
   }, []);
 
+  async function deleteRace(id: string, name: string) {
+    if (
+      !confirm(`Delete "${name}"? This will remove all runners and lap times.`)
+    )
+      return;
+    await fetch(`/api/races/${id}`, { method: "DELETE" });
+    fetchRaces();
+  }
+
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-8">
@@ -64,11 +73,23 @@ export default function DashboardPage() {
                 {race.status}
               </span>
               <Link
+                href={`/admin/races/${race.id}/edit`}
+                className="text-sm text-gray-500 hover:text-black transition-colors"
+              >
+                Edit
+              </Link>
+              <Link
                 href={`/admin/races/${race.id}/timer`}
                 className="text-sm text-gray-500 hover:text-black transition-colors"
               >
                 Timer →
               </Link>
+              <button
+                onClick={() => deleteRace(race.id, race.name)}
+                className="text-sm text-red-400 hover:text-red-600 transition-colors"
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}
