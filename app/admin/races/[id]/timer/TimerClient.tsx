@@ -19,6 +19,17 @@ interface Props {
   initialLaps: Lap[];
 }
 
+interface LogEntry {
+  lapId: string;
+  runnerId: string;
+  bibNumber: number;
+  runnerName: string | null;
+  lapNumber: number;
+  elapsedMs: number;
+  isFinish: boolean;
+  isOverLimit: boolean;
+}
+
 export default function TimerClient({
   race: initialRace,
   initialRunners,
@@ -29,23 +40,26 @@ export default function TimerClient({
   const [laps, setLaps] = useState<Lap[]>(initialLaps);
   const [elapsed, setElapsed] = useState(0);
   const [bibInput, setBibInput] = useState("");
+  const [log, setLog] = useState<LogEntry[]>([]);
   const [newBib, setNewBib] = useState("");
   const [newName, setNewName] = useState("");
   const [newGender, setNewGender] = useState("");
-  const uniqueGenders = [...new Set(race.categories.map((c) => c.name))];
-  const availableLaps = race.categories.filter((c) => c.name === newGender);
   const [newTeam, setNewTeam] = useState("");
   const [newCountry, setNewCountry] = useState("");
   const [newLapsCount, setNewLapsCount] = useState("");
+  const [csvError, setCsvError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{
     message: string;
     ok: boolean;
+    warn?: boolean;
   } | null>(null);
-  const [csvError, setCsvError] = useState<string | null>(null);
-  const bibRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const uniqueGenders = [...new Set(race.categories.map((c) => c.name))];
+  const availableLaps = race.categories.filter((c) => c.name === newGender);
+
+  // Timer
   useEffect(() => {
     if (race.status !== "active" || !race.started_at) return;
     const tick = () =>
@@ -57,11 +71,31 @@ export default function TimerClient({
     };
   }, [race.status, race.started_at]);
 
+  // Keyboard input
+  useEffect(() => {
+    if (race.status !== "active") return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key >= "0" && e.key <= "9") {
+        numpadPress(e.key);
+      } else if (e.key === "Backspace") {
+        numpadPress("DEL");
+      } else if (e.key === "Enter") {
+        recordLap();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [race.status, bibInput, laps, runners]);
+
+  // Feedback handler
   const showFeedback = useCallback((message: string, ok: boolean) => {
     setFeedback({ message, ok });
-    setTimeout(() => setFeedback(null), 2000);
+    setTimeout(() => setFeedback(null), 5000);
   }, []);
 
+  // Start
   async function startRace() {
     const res = await fetch(`/api/races/${race.id}`, {
       method: "PATCH",
@@ -71,11 +105,10 @@ export default function TimerClient({
         started_at: new Date().toISOString(),
       }),
     });
-    const updated = await res.json();
-    setRace(updated);
-    setTimeout(() => bibRef.current?.focus(), 100);
+    setRace(await res.json());
   }
 
+  // Finish
   async function finishRace() {
     if (!confirm("Mark this race as finished?")) return;
     const res = await fetch(`/api/races/${race.id}`, {
@@ -86,8 +119,17 @@ export default function TimerClient({
     setRace(await res.json());
   }
 
-  async function recordLap(e: React.FormEvent) {
-    e.preventDefault();
+  // Numpad press
+  function numpadPress(val: string) {
+    if (val === "DEL") {
+      setBibInput((prev) => prev.slice(0, -1));
+    } else if (bibInput.length < 4) {
+      setBibInput((prev) => prev + val);
+    }
+  }
+
+  // Record lap
+  async function recordLap() {
     if (!bibInput.trim()) return;
     const currentElapsed = Date.now() - new Date(race.started_at!).getTime();
     const res = await fetch("/api/laps", {
@@ -102,20 +144,53 @@ export default function TimerClient({
     if (res.ok) {
       const data = await res.json();
       setLaps((prev) => [...prev, data]);
-      const lapCount =
+      const runner = runners.find((r) => r.id === data.runner_id);
+      const runnerLapCount =
         laps.filter((l) => l.runner_id === data.runner_id).length + 1;
-      const isFinish = lapCount >= race.laps_count;
-      showFeedback(
-        `#${bibInput} — ${isFinish ? "🏁 Finished!" : `Lap ${lapCount}/${race.laps_count}`} — ${formatTime(currentElapsed)}`,
-        true,
-      );
+      const targetLaps = runner?.laps_count ?? race.laps_count;
+      const isFinish = runnerLapCount >= targetLaps;
+      const entry: LogEntry = {
+        lapId: data.id,
+        runnerId: data.runner_id,
+        bibNumber: Number(bibInput),
+        runnerName: runner?.name ?? null,
+        lapNumber: runnerLapCount,
+        elapsedMs: currentElapsed,
+        isFinish,
+        isOverLimit: runnerLapCount > targetLaps,
+      };
+      setLog((prev) => [entry, ...prev]);
+
+      if (runnerLapCount > targetLaps) {
+        setFeedback({
+          message: `⚠ #${bibInput} exceeded ${targetLaps} laps (${runnerLapCount} recorded)`,
+          ok: false,
+          warn: true,
+        });
+        setTimeout(() => setFeedback(null), 5000);
+      } else {
+        showFeedback(
+          isFinish
+            ? `#${bibInput} Finished!`
+            : `#${bibInput} Lap ${runnerLapCount}`,
+          true,
+        );
+      }
     } else {
       showFeedback(`Bib #${bibInput} not found`, false);
     }
     setBibInput("");
-    bibRef.current?.focus();
   }
 
+  // Undo log entry
+  async function undoLogEntry(entry: LogEntry) {
+    if (!confirm(`Undo lap for bib #${entry.bibNumber}?`)) return;
+    await fetch(`/api/laps/${entry.lapId}`, { method: "DELETE" });
+    setLaps((prev) => prev.filter((l) => l.id !== entry.lapId));
+    setLog((prev) => prev.filter((l) => l.lapId !== entry.lapId));
+  }
+
+  // Add runner
   async function addRunner(e: React.FormEvent) {
     e.preventDefault();
     const res = await fetch(`/api/races/${race.id}/runners`, {
@@ -144,6 +219,7 @@ export default function TimerClient({
     }
   }
 
+  // Remove runner
   async function removeRunner(runnerId: string, bibNumber: number) {
     if (!confirm(`Remove bib #${bibNumber} from this race?`)) return;
     await fetch(`/api/races/${race.id}/runners/${runnerId}`, {
@@ -153,15 +229,7 @@ export default function TimerClient({
     setLaps((prev) => prev.filter((l) => l.runner_id !== runnerId));
   }
 
-  async function undoLastLap(runnerId: string, bibNumber: number) {
-    const runnerLaps = laps.filter((l) => l.runner_id === runnerId);
-    if (!runnerLaps.length) return;
-    const lastLap = runnerLaps[runnerLaps.length - 1];
-    if (!confirm(`Undo last lap for bib #${bibNumber}?`)) return;
-    await fetch(`/api/laps/${lastLap.id}`, { method: "DELETE" });
-    setLaps((prev) => prev.filter((l) => l.id !== lastLap.id));
-  }
-
+  // Import CSV
   async function importCsv(e: React.ChangeEvent<HTMLInputElement>) {
     setCsvError(null);
     const file = e.target.files?.[0];
@@ -171,46 +239,34 @@ export default function TimerClient({
       .trim()
       .split("\n")
       .filter((l) => l.trim());
-
-    // Skip header row if present
     const dataLines = lines[0].toLowerCase().includes("bib")
       ? lines.slice(1)
       : lines;
-
-    let imported = 0;
-    let errors = 0;
-
+    let imported = 0,
+      errors = 0;
     for (const line of dataLines) {
       const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
       const bib = parseInt(parts[0]);
-      const name = parts[1] || null;
-      const gender = parts[2] || null;
-      const team = parts[3] || null;
-      const country = parts[4] || null;
-      const laps_count = parts[5] ? parseInt(parts[5]) : null;
-
       if (isNaN(bib)) {
         errors++;
         continue;
       }
-
       const res = await fetch(`/api/races/${race.id}/runners`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bib_number: bib,
-          name,
-          gender,
-          team,
-          country,
-          laps_count,
+          name: parts[1] || null,
+          gender: parts[2] || null,
+          team: parts[3] || null,
+          country: parts[4] || null,
+          laps_count: parts[5] ? parseInt(parts[5]) : null,
         }),
       });
       if (res.ok) {
         const runner = await res.json();
         setRunners((prev) => {
-          const exists = prev.find((r) => r.id === runner.id);
-          if (exists) return prev;
+          if (prev.find((r) => r.id === runner.id)) return prev;
           return [...prev, runner].sort((a, b) => a.bib_number - b.bib_number);
         });
         imported++;
@@ -218,15 +274,15 @@ export default function TimerClient({
         errors++;
       }
     }
-
     if (fileRef.current) fileRef.current.value = "";
     setCsvError(
       errors > 0
-        ? `Imported ${imported} runners. ${errors} skipped (duplicate bib or invalid row).`
+        ? `Imported ${imported} runners. ${errors} skipped.`
         : `Imported ${imported} runners successfully.`,
     );
   }
 
+  // Prepare runner rows with status
   const runnerRows = runners
     .map((runner) => {
       const runnerLaps = laps.filter((l) => l.runner_id === runner.id);
@@ -253,7 +309,7 @@ export default function TimerClient({
     });
 
   return (
-    <main className="min-h-screen p-8 max-w-3xl mx-auto">
+    <main className="min-h-screen p-4 md:p-8 max-w-3xl mx-auto">
       <a
         href="/admin/dashboard"
         className="text-sm text-gray-400 hover:text-gray-600 mb-6 inline-block"
@@ -264,8 +320,8 @@ export default function TimerClient({
       {/* Header */}
       <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 className="text-3xl font-medium">{race.name}</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-2xl font-medium">{race.name}</h1>
+          <p className="text-gray-500 mt-1 text-sm">
             {race.laps_count} laps · {race.lap_distance_m}m
           </p>
         </div>
@@ -298,45 +354,124 @@ export default function TimerClient({
         </div>
       </div>
 
-      {/* Bib input */}
+      {/* Numpad — only when active */}
       {race.status === "active" && (
-        <form onSubmit={recordLap} className="mb-8">
-          <label className="text-sm text-gray-500 mb-2 block">
-            Enter bib number
-          </label>
-          <div className="flex gap-2">
-            <input
-              ref={bibRef}
-              type="number"
-              value={bibInput}
-              onChange={(e) => setBibInput(e.target.value)}
-              placeholder="Bib #"
-              className="border-2 border-black rounded-lg px-4 py-3 text-2xl font-mono w-40 outline-none"
-              autoFocus
-            />
+        <div className="mb-8">
+          {/* Display */}
+          <div
+            className={`border-2 rounded-xl px-6 py-4 text-6xl font-mono text-center tracking-widest mb-3 transition-colors ${bibInput ? "border-black" : "border-gray-200 text-gray-300"}`}
+          >
+            {bibInput || "—"}
+          </div>
+
+          {/* Number grid */}
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((n) => (
+              <button
+                key={n}
+                onClick={() => numpadPress(n)}
+                className="bg-gray-50 hover:bg-gray-100 active:scale-95 transition-all rounded-xl py-5 text-2xl font-medium"
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             <button
-              type="submit"
-              className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors text-lg"
+              onClick={() => numpadPress("DEL")}
+              className="bg-gray-50 hover:bg-gray-100 active:scale-95 transition-all rounded-xl py-5 text-lg font-medium text-gray-500"
             >
-              Record
+              ⌫
+            </button>
+            <button
+              onClick={() => numpadPress("0")}
+              className="bg-gray-50 hover:bg-gray-100 active:scale-95 transition-all rounded-xl py-5 text-2xl font-medium"
+            >
+              0
+            </button>
+            <button
+              onClick={recordLap}
+              disabled={!bibInput}
+              className="bg-black text-white hover:bg-gray-800 active:scale-95 transition-all rounded-xl py-5 text-lg font-medium disabled:opacity-30"
+            >
+              ✓
             </button>
           </div>
+
+          {/* Feedback */}
           {feedback && (
             <p
-              className={`mt-3 text-sm font-medium ${feedback.ok ? "text-green-600" : "text-red-500"}`}
+              className={`text-center text-sm font-medium mb-3 ${
+                feedback.warn
+                  ? "text-amber-500"
+                  : feedback.ok
+                    ? "text-green-600"
+                    : "text-red-500"
+              }`}
             >
               {feedback.message}
             </p>
           )}
-        </form>
+        </div>
       )}
 
-      {/* Add runners + CSV import */}
+      {/* Recording log */}
+      {race.status === "active" && log.length > 0 && (
+        <div className="mb-8">
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">
+            Recent recordings
+          </p>
+          <div className="flex flex-col gap-2">
+            {log.map((entry) => (
+              <div
+                key={entry.lapId}
+                className="flex items-center justify-between border border-gray-100 rounded-lg px-4 py-2.5"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-mono font-medium text-lg w-10">
+                    #{entry.bibNumber}
+                  </span>
+                  <div>
+                    <span className="text-sm">
+                      {entry.runnerName ?? `Bib #${entry.bibNumber}`}
+                    </span>
+                    <span className="text-xs text-gray-400 ml-2">
+                      {entry.isOverLimit ? (
+                        <span className="text-amber-500">
+                          ⚠ Lap {entry.lapNumber} (limit{" "}
+                          {runners.find((r) => r.id === entry.runnerId)
+                            ?.laps_count ?? race.laps_count}
+                          )
+                        </span>
+                      ) : entry.isFinish ? (
+                        <span className="text-green-600">🏁 Finished</span>
+                      ) : (
+                        `Lap ${entry.lapNumber}`
+                      )}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-sm text-gray-500">
+                    {formatTime(entry.elapsedMs)}
+                  </span>
+                  <button
+                    onClick={() => undoLogEntry(entry)}
+                    className="text-xs text-amber-500 hover:text-amber-700 transition-colors"
+                  >
+                    Undo
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add runners */}
       {race.status === "pending" && (
         <div className="mb-8 p-4 border border-gray-200 rounded-lg space-y-4">
           <h2 className="font-medium">Add runners</h2>
-
-          {/* Manual add */}
           <form onSubmit={addRunner} className="flex flex-col gap-2">
             <div className="flex gap-2">
               <input
@@ -355,7 +490,7 @@ export default function TimerClient({
                 className="border border-gray-200 rounded-lg px-3 py-2 flex-1 outline-none focus:border-gray-400"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <select
                 value={newGender}
                 onChange={(e) => setNewGender(e.target.value)}
@@ -385,8 +520,8 @@ export default function TimerClient({
               <select
                 value={newLapsCount}
                 onChange={(e) => setNewLapsCount(e.target.value)}
-                className="border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-gray-400"
                 required
+                className="border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-gray-400"
               >
                 <option value="">Laps</option>
                 {availableLaps.map((c, i) => (
@@ -403,13 +538,11 @@ export default function TimerClient({
               </button>
             </div>
           </form>
-
-          {/* CSV import */}
           <div>
             <p className="text-sm text-gray-500 mb-1">
               Or import from CSV{" "}
               <span className="text-gray-400">
-                (columns: bib, name, gender, team, country, laps_count)
+                (bib, name, gender, team, country, laps_count)
               </span>
             </p>
             <input
@@ -428,48 +561,40 @@ export default function TimerClient({
 
       {/* Runner table */}
       {runners.length > 0 && (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-gray-400 border-b border-gray-100">
-              <th className="pb-2 w-8">#</th>
-              <th className="pb-2 w-16">Bib</th>
-              <th className="pb-2">Name</th>
-              <th className="pb-2 text-right">Laps</th>
-              <th className="pb-2 text-right">Time</th>
-              <th className="pb-2 w-20"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {runnerRows.map((row, i) => (
-              <tr
-                key={row.runner.id}
-                className={`border-b border-gray-50 ${row.finished ? "text-green-600" : ""}`}
-              >
-                <td className="py-3 text-gray-400">{i + 1}</td>
-                <td className="py-3 font-mono font-medium">
-                  {row.runner.bib_number}
-                </td>
-                <td className="py-3">{row.runner.name ?? "—"}</td>
-                <td className="py-3 text-right">
-                  {row.lapsCompleted}/{row.targetLaps}
-                  {row.finished && <span className="ml-1">✓</span>}
-                </td>
-                <td className="py-3 text-right font-mono">
-                  {row.lastElapsed ? formatTime(row.lastElapsed) : "—"}
-                </td>
-                <td className="py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    {race.status === "active" && row.lapsCompleted > 0 && (
-                      <button
-                        onClick={() =>
-                          undoLastLap(row.runner.id, row.runner.bib_number)
-                        }
-                        className="text-xs text-amber-500 hover:text-amber-700"
-                        title="Undo last lap"
-                      >
-                        Undo
-                      </button>
-                    )}
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">
+            Runners
+          </p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-400 border-b border-gray-100">
+                <th className="pb-2 w-8">#</th>
+                <th className="pb-2 w-16">Bib</th>
+                <th className="pb-2">Name</th>
+                <th className="pb-2 text-right">Laps</th>
+                <th className="pb-2 text-right">Time</th>
+                <th className="pb-2 w-16"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {runnerRows.map((row, i) => (
+                <tr
+                  key={row.runner.id}
+                  className={`border-b border-gray-50 ${row.finished ? "text-green-600" : ""}`}
+                >
+                  <td className="py-3 text-gray-400">{i + 1}</td>
+                  <td className="py-3 font-mono font-medium">
+                    {row.runner.bib_number}
+                  </td>
+                  <td className="py-3">{row.runner.name ?? "—"}</td>
+                  <td className="py-3 text-right">
+                    {row.lapsCompleted}/{row.targetLaps}
+                    {row.finished && <span className="ml-1">✓</span>}
+                  </td>
+                  <td className="py-3 text-right font-mono">
+                    {row.lastElapsed ? formatTime(row.lastElapsed) : "—"}
+                  </td>
+                  <td className="py-3 text-right">
                     {race.status === "pending" && (
                       <button
                         onClick={() =>
@@ -480,12 +605,12 @@ export default function TimerClient({
                         Remove
                       </button>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {race.status === "pending" && runners.length === 0 && (
