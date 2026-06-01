@@ -37,7 +37,16 @@ export default async function RacePage({
       >
         ← All races
       </a>
-      <h1 className="text-3xl font-medium mb-1">{race.name}</h1>
+
+      <div className="flex items-center gap-3 mb-1">
+        <h1 className="text-3xl font-medium">{race.name}</h1>
+        {race.status === "active" && (
+          <span className="flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-medium px-2.5 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            Live
+          </span>
+        )}
+      </div>
       <p className="text-gray-500 mb-8">
         {new Date(race.date).toLocaleDateString("da-DK")} · {race.laps_count}{" "}
         laps · {race.lap_distance_m}m per lap

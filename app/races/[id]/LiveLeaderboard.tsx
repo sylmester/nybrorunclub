@@ -267,12 +267,6 @@ export default function LiveLeaderboard({
           </button>
         </div>
         <div className="flex items-center gap-4">
-          {race.status === "active" && (
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-green-600 font-medium">Live</span>
-            </div>
-          )}
           <button
             onClick={exportCsv}
             className="text-sm text-gray-500 hover:text-black transition-colors"

@@ -15,8 +15,12 @@ export default function NewRacePage() {
   });
 
   const [categories, setCategories] = useState<RaceCategory[]>([
-    { name: "Men", laps_count: 3 },
-    { name: "Women", laps_count: 3 },
+    { name: "Mand", laps_count: 3 },
+    { name: "Kvinde", laps_count: 3 },
+    { name: "Mand", laps_count: 2 },
+    { name: "Kvinde", laps_count: 2 },
+    { name: "Mand", laps_count: 1 },
+    { name: "Kvinde", laps_count: 1 },
   ]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
