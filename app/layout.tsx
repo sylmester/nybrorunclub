@@ -8,8 +8,11 @@ import Footer from "./components/Footer";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Nybro Run Club",
-  description: "Race results and timing",
+  title: "Nybrogård Løbeklub",
+  description: "Race results and timing for Nybrogård Løbeklub",
+  icons: {
+    icon: "/logo.svg",
+  },
 };
 
 export default function RootLayout({
