@@ -32,7 +32,7 @@ export default async function RacePage({
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto">
       <a
-        href="/"
+        href="/races"
         className="text-sm text-gray-400 hover:text-gray-600 mb-6 inline-block"
       >
         ← All races
