@@ -73,13 +73,26 @@ function computeStats(
     const count = laps.filter((l) => l.runner_id === runner.id).length;
     return sum + count * race.lap_distance_m;
   }, 0);
-  const fastestFinisher = finishers.reduce(
-    (best, row) =>
-      !best || (row.lastElapsed ?? Infinity) < (best.lastElapsed ?? Infinity)
-        ? row
-        : best,
-    null as RunnerRow | null,
-  );
+  // Fastest single lap (difference between consecutive elapsed times)
+  let fastestLapMs: number | null = null;
+  let fastestLapRunner: Runner | null = null;
+
+  runners.forEach((runner) => {
+    const runnerLaps = laps
+      .filter((l) => l.runner_id === runner.id)
+      .sort((a, b) => a.lap_number - b.lap_number);
+
+    runnerLaps.forEach((lap, i) => {
+      const lapDuration =
+        i === 0
+          ? lap.elapsed_ms
+          : lap.elapsed_ms - runnerLaps[i - 1].elapsed_ms;
+      if (fastestLapMs === null || lapDuration < fastestLapMs) {
+        fastestLapMs = lapDuration;
+        fastestLapRunner = runner;
+      }
+    });
+  });
   const avgFinishMs = finishers.length
     ? finishers.reduce((sum, r) => sum + (r.lastElapsed ?? 0), 0) /
       finishers.length
@@ -115,7 +128,8 @@ function computeStats(
     finishers: finishers.length,
     total: runners.length,
     totalDistanceM,
-    fastestFinisher,
+    fastestLapMs,
+    fastestLapRunner: fastestLapRunner as Runner | null,
     avgFinishMs,
     teamStats,
     maxTeamDist,
@@ -436,16 +450,14 @@ export default function LiveLeaderboard({
               <p className="text-sm text-gray-400">across all runners</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-xs text-gray-400 mb-1">Fastest finish</p>
+              <p className="text-xs text-gray-400 mb-1">Fastest lap</p>
               <p className="text-2xl font-medium">
-                {stats.fastestFinisher
-                  ? formatTime(stats.fastestFinisher.lastElapsed!)
-                  : "—"}
+                {stats.fastestLapMs ? formatTime(stats.fastestLapMs) : "—"}
               </p>
               <p className="text-sm text-gray-400">
-                {stats.fastestFinisher
-                  ? (stats.fastestFinisher.runner.name ??
-                    `Bib #${stats.fastestFinisher.runner.bib_number}`)
+                {stats.fastestLapRunner
+                  ? (stats.fastestLapRunner.name ??
+                    `Bib #${stats.fastestLapRunner.bib_number}`)
                   : "—"}
               </p>
             </div>
