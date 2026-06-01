@@ -9,6 +9,7 @@ export interface Race {
   id: string;
   name: string;
   date: string;
+  description: string | null;
   laps_count: number;
   lap_distance_m: number;
   status: RaceStatus;

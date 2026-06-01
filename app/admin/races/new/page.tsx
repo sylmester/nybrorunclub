@@ -11,7 +11,9 @@ export default function NewRacePage() {
     name: "",
     date: new Date().toISOString().split("T")[0],
     lap_distance_m: 1000,
+    description: "",
   });
+
   const [categories, setCategories] = useState<RaceCategory[]>([
     { name: "Men", laps_count: 3 },
     { name: "Women", laps_count: 3 },
@@ -85,6 +87,18 @@ export default function NewRacePage() {
             value={form.date}
             onChange={handleChange}
             required
+            className="w-full border border-gray-200 rounded-lg px-4 py-2 outline-none focus:border-gray-400"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-gray-500 mb-1 block">
+            Description (optional)
+          </label>
+          <input
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            placeholder="Route goes around Bagsværd Sø..."
             className="w-full border border-gray-200 rounded-lg px-4 py-2 outline-none focus:border-gray-400"
           />
         </div>

@@ -2,7 +2,7 @@ export default function InfoPage() {
   return (
     <main className="max-w-2xl mx-auto px-8 py-16">
       <h1 className="text-3xl font-medium mb-2">Nybrogård Running Club</h1>
-      <p className="text-gray-500 mb-12">Last updated March 27, 2026</p>
+      <p className="text-gray-500 mb-12">Last updated June 1, 2026</p>
 
       <section className="mb-10">
         <h2 className="font-medium mb-3">Welcome</h2>

@@ -11,6 +11,7 @@ export default function EditRaceClient({ race }: { race: Race }) {
     name: race.name,
     date: race.date,
     lap_distance_m: race.lap_distance_m,
+    description: race.description || "",
   });
   const [categories, setCategories] = useState<RaceCategory[]>(
     race.categories ?? [],
@@ -82,6 +83,18 @@ export default function EditRaceClient({ race }: { race: Race }) {
             value={form.date}
             onChange={handleChange}
             required
+            className="w-full border border-gray-200 rounded-lg px-4 py-2 outline-none focus:border-gray-400"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-gray-500 mb-1 block">
+            Description (optional)
+          </label>
+          <input
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            placeholder="Route goes around Bagsværd Sø..."
             className="w-full border border-gray-200 rounded-lg px-4 py-2 outline-none focus:border-gray-400"
           />
         </div>

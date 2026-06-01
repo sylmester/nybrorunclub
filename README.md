@@ -208,15 +208,7 @@ DNS is managed at Simply.com pointing to Vercel:
 
 ## Potential improvements
 
-- [ ] Delete race functionality
-- [ ] Edit race details (name, date, laps)
-- [ ] Remove a runner from a race
-- [ ] Undo last lap (in case of mistyped bib number)
-- [ ] Import runners from CSV (name + bib number)
-- [ ] Race results export to CSV/PDF
 - [ ] Multiple admin users
 - [ ] Public race registration (runners sign up online)
-- [ ] Race categories (age groups, gender)
-- [ ] Per-lap split times displayed on results page
 - [ ] Mobile-optimised timer screen (large bib input for use on phone at finish line)
 - [ ] QR code on public results page for spectators to scan
