@@ -25,6 +25,7 @@ export async function POST(req: Request) {
       date: body.date,
       laps_count: body.laps_count,
       lap_distance_m: body.lap_distance_m,
+      categories: body.categories ?? [],
     })
     .select()
     .single();
