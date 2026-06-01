@@ -31,6 +31,12 @@ export default function TimerClient({
   const [bibInput, setBibInput] = useState("");
   const [newBib, setNewBib] = useState("");
   const [newName, setNewName] = useState("");
+  const [newGender, setNewGender] = useState("");
+  const uniqueGenders = [...new Set(race.categories.map((c) => c.name))];
+  const availableLaps = race.categories.filter((c) => c.name === newGender);
+  const [newTeam, setNewTeam] = useState("");
+  const [newCountry, setNewCountry] = useState("");
+  const [newLapsCount, setNewLapsCount] = useState("");
   const [feedback, setFeedback] = useState<{
     message: string;
     ok: boolean;
@@ -118,6 +124,10 @@ export default function TimerClient({
       body: JSON.stringify({
         bib_number: Number(newBib),
         name: newName || null,
+        gender: newGender || null,
+        team: newTeam || null,
+        country: newCountry || null,
+        laps_count: newLapsCount ? Number(newLapsCount) : null,
       }),
     });
     if (res.ok) {
@@ -127,6 +137,10 @@ export default function TimerClient({
       );
       setNewBib("");
       setNewName("");
+      setNewGender("");
+      setNewTeam("");
+      setNewCountry("");
+      setNewLapsCount("");
     }
   }
 
@@ -158,13 +172,22 @@ export default function TimerClient({
       .split("\n")
       .filter((l) => l.trim());
 
+    // Skip header row if present
+    const dataLines = lines[0].toLowerCase().includes("bib")
+      ? lines.slice(1)
+      : lines;
+
     let imported = 0;
     let errors = 0;
 
-    for (const line of lines) {
+    for (const line of dataLines) {
       const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
       const bib = parseInt(parts[0]);
       const name = parts[1] || null;
+      const gender = parts[2] || null;
+      const team = parts[3] || null;
+      const country = parts[4] || null;
+      const laps_count = parts[5] ? parseInt(parts[5]) : null;
 
       if (isNaN(bib)) {
         errors++;
@@ -174,7 +197,14 @@ export default function TimerClient({
       const res = await fetch(`/api/races/${race.id}/runners`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bib_number: bib, name }),
+        body: JSON.stringify({
+          bib_number: bib,
+          name,
+          gender,
+          team,
+          country,
+          laps_count,
+        }),
       });
       if (res.ok) {
         const runner = await res.json();
@@ -202,12 +232,14 @@ export default function TimerClient({
       const runnerLaps = laps.filter((l) => l.runner_id === runner.id);
       const lapsCompleted = runnerLaps.length;
       const lastLap = runnerLaps[runnerLaps.length - 1];
+      const targetLaps = runner.laps_count ?? race.laps_count;
       return {
         runner,
         lapsCompleted,
+        targetLaps,
         lastElapsed: lastLap?.elapsed_ms ?? null,
         lastLapId: lastLap?.id ?? null,
-        finished: lapsCompleted >= race.laps_count,
+        finished: lapsCompleted >= targetLaps,
       };
     })
     .sort((a, b) => {
@@ -305,35 +337,80 @@ export default function TimerClient({
           <h2 className="font-medium">Add runners</h2>
 
           {/* Manual add */}
-          <form onSubmit={addRunner} className="flex gap-2">
-            <input
-              type="number"
-              value={newBib}
-              onChange={(e) => setNewBib(e.target.value)}
-              placeholder="Bib #"
-              required
-              className="border border-gray-200 rounded-lg px-3 py-2 w-24 outline-none focus:border-gray-400"
-            />
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="Name (optional)"
-              className="border border-gray-200 rounded-lg px-3 py-2 flex-1 outline-none focus:border-gray-400"
-            />
-            <button
-              type="submit"
-              className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm"
-            >
-              Add
-            </button>
+          <form onSubmit={addRunner} className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={newBib}
+                onChange={(e) => setNewBib(e.target.value)}
+                placeholder="Bib #"
+                required
+                className="border border-gray-200 rounded-lg px-3 py-2 w-24 outline-none focus:border-gray-400"
+              />
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Name"
+                className="border border-gray-200 rounded-lg px-3 py-2 flex-1 outline-none focus:border-gray-400"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={newGender}
+                onChange={(e) => setNewGender(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-gray-400"
+              >
+                <option value="">Gender</option>
+                {uniqueGenders.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={newTeam}
+                onChange={(e) => setNewTeam(e.target.value)}
+                placeholder="Team"
+                className="border border-gray-200 rounded-lg px-3 py-2 flex-1 outline-none focus:border-gray-400"
+              />
+              <input
+                type="text"
+                value={newCountry}
+                onChange={(e) => setNewCountry(e.target.value)}
+                placeholder="Country"
+                className="border border-gray-200 rounded-lg px-3 py-2 w-28 outline-none focus:border-gray-400"
+              />
+              <select
+                value={newLapsCount}
+                onChange={(e) => setNewLapsCount(e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-gray-400"
+                required
+              >
+                <option value="">Laps</option>
+                {availableLaps.map((c, i) => (
+                  <option key={i} value={c.laps_count}>
+                    {c.laps_count} laps
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors text-sm"
+              >
+                Add
+              </button>
+            </div>
           </form>
 
           {/* CSV import */}
           <div>
             <p className="text-sm text-gray-500 mb-1">
               Or import from CSV{" "}
-              <span className="text-gray-400">(columns: bib_number, name)</span>
+              <span className="text-gray-400">
+                (columns: bib, name, gender, team, country, laps_count)
+              </span>
             </p>
             <input
               ref={fileRef}
@@ -374,7 +451,7 @@ export default function TimerClient({
                 </td>
                 <td className="py-3">{row.runner.name ?? "—"}</td>
                 <td className="py-3 text-right">
-                  {row.lapsCompleted}/{race.laps_count}
+                  {row.lapsCompleted}/{row.targetLaps}
                   {row.finished && <span className="ml-1">✓</span>}
                 </td>
                 <td className="py-3 text-right font-mono">

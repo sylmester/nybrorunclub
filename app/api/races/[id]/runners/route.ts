@@ -18,6 +18,10 @@ export async function POST(
       race_id: id,
       bib_number: body.bib_number,
       name: body.name ?? null,
+      gender: body.gender ?? null,
+      team: body.team ?? null,
+      country: body.country ?? null,
+      laps_count: body.laps_count ?? null,
     })
     .select()
     .single();

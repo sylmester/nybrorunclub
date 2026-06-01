@@ -1,5 +1,10 @@
 export type RaceStatus = "pending" | "active" | "finished";
 
+export interface RaceCategory {
+  name: string;
+  laps_count: number;
+}
+
 export interface Race {
   id: string;
   name: string;
@@ -9,6 +14,7 @@ export interface Race {
   status: RaceStatus;
   started_at: string | null;
   created_at: string;
+  categories: RaceCategory[];
 }
 
 export interface Runner {
@@ -16,6 +22,10 @@ export interface Runner {
   race_id: string;
   bib_number: number;
   name: string | null;
+  gender: string | null;
+  team: string | null;
+  country: string | null;
+  laps_count: number | null; // overrides race default if set
 }
 
 export interface Lap {
