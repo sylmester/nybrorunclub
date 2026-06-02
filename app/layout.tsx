@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "./Providers";
 import Nav from "./components/Nav";
 import Footer from "./components/Footer";
+import { Analytics } from "@vercel/analytics/next";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
           <Nav />
           <div className="min-h-screen">{children}</div>
           <Footer />
+          <Analytics />
         </Providers>
       </body>
     </html>
