@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+@keyframes sponsor-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-141.333%);
+  }
+}
+
+.animate-sponsor-scroll {
+  animation: sponsor-scroll 15s linear infinite;
+}
+
+.animate-sponsor-scroll:hover {
+  animation-play-state: paused;
+}

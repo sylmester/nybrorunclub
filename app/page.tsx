@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { Race } from "@/types";
+import SponsorBar from "./components/SponsorBar";
 
 export default async function Home() {
   const { data: races } = await supabaseAdmin
@@ -38,7 +39,7 @@ export default async function Home() {
 
       {/* Live races */}
       {races && races.length > 0 && (
-        <div className="mb-16">
+        <div className="mb-8">
           <h2 className="text-sm text-gray-400 uppercase tracking-wide mb-4">
             Live now
           </h2>
@@ -65,6 +66,10 @@ export default async function Home() {
           </div>
         </div>
       )}
+
+      <div className="mb-8">
+        <SponsorBar />
+      </div>
 
       {/* Quick links */}
       <div className="grid grid-cols-2 gap-4">
