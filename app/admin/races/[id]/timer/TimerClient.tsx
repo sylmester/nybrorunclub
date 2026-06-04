@@ -579,18 +579,22 @@ export default function TimerClient({
 
       {/* Runner table */}
       {runners.length > 0 && (
-        <div>
+        <div className="overflow-x-auto -mx-4 md:-mx-8 px-4 md:px-8">
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">
             Runners
           </p>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-400 border-b border-gray-100">
-                <th className="pb-2 w-8">#</th>
-                <th className="pb-2 w-16">Bib</th>
-                <th className="pb-2">Name</th>
-                <th className="pb-2 text-right">Laps</th>
-                <th className="pb-2 text-right">Time</th>
+                <th className="pb-2 pr-3">Pos.</th>
+                <th className="pb-2 pr-3">Bib</th>
+                <th className="pb-2 pr-3">Participant</th>
+                <th className="pb-2 pr-3">Category</th>
+                <th className="pb-2 pr-3">Team</th>
+                <th className="pb-2 pr-3">Country</th>
+                <th className="pb-2 pr-3 text-right">Distance</th>
+                <th className="pb-2 pr-3 text-right">Finish time</th>
+                <th className="pb-2 pr-3 text-right">Progress</th>
                 <th className="pb-2 w-16"></th>
               </tr>
             </thead>
@@ -598,19 +602,35 @@ export default function TimerClient({
               {runnerRows.map((row, i) => (
                 <tr
                   key={row.runner.id}
-                  className={`border-b border-gray-50 ${row.finished ? "text-green-600" : ""}`}
+                  className={`border-b border-gray-50 ${row.finished ? "text-green-700" : ""}`}
                 >
-                  <td className="py-3 text-gray-400">{i + 1}</td>
-                  <td className="py-3 font-mono font-medium">
+                  <td className="py-3 pr-3 text-gray-400">{i + 1}</td>
+                  <td className="py-3 pr-3 font-mono font-medium">
                     {row.runner.bib_number}
                   </td>
-                  <td className="py-3">{row.runner.name ?? "—"}</td>
-                  <td className="py-3 text-right">
+                  <td className="py-3 pr-3">{row.runner.name ?? "—"}</td>
+                  <td className="py-3 pr-3 text-gray-500">
+                    {row.runner.gender ?? "—"}
+                  </td>
+                  <td className="py-3 pr-3 text-gray-500">
+                    {row.runner.team ?? "—"}
+                  </td>
+                  <td className="py-3 pr-3 text-gray-500">
+                    {row.runner.country ?? "—"}
+                  </td>
+                  <td className="py-3 pr-3 text-right text-gray-500">
+                    {row.runner.laps_count
+                      ? `${((row.runner.laps_count * race.lap_distance_m) / 1000).toFixed(0)} km`
+                      : "—"}
+                  </td>
+                  <td className="py-3 pr-3 text-right font-mono">
+                    {row.finished && row.lastElapsed
+                      ? formatTime(row.lastElapsed)
+                      : "—"}
+                  </td>
+                  <td className="py-3 pr-3 text-right">
                     {row.lapsCompleted}/{row.targetLaps}
                     {row.finished && <span className="ml-1">✓</span>}
-                  </td>
-                  <td className="py-3 text-right font-mono">
-                    {row.lastElapsed ? formatTime(row.lastElapsed) : "—"}
                   </td>
                   <td className="py-3 text-right">
                     {(race.status === "pending" || race.status === "draft") && (
@@ -618,9 +638,25 @@ export default function TimerClient({
                         onClick={() =>
                           removeRunner(row.runner.id, row.runner.bib_number)
                         }
-                        className="text-xs text-red-400 hover:text-red-600"
+                        className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                        title="Remove runner"
                       >
-                        Remove
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="15"
+                          height="15"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6M14 11v6" />
+                          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                        </svg>
                       </button>
                     )}
                   </td>
