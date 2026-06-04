@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const statusColors: Record<Race["status"], string> = {
-  draft: "bg-gray-100 text-gray-500",
   pending: "bg-yellow-100 text-gray-500",
   active: "bg-green-100 text-gray-500",
   finished: "bg-gray-100 text-gray-500",
@@ -35,22 +34,7 @@ export default function DashboardPage() {
     fetchRaces();
   }
 
-  async function publishRace(raceId: string) {
-    await fetch(`/api/races/${raceId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "pending" }),
-    });
-    fetchRaces();
-  }
-  async function unpublishRace(raceId: string) {
-    await fetch(`/api/races/${raceId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "draft" }),
-    });
-    fetchRaces();
-  }
+  // status transitions handled elsewhere; visibility is controlled by `is_visible`
 
   async function toggleVisibility(raceId: string, current: boolean) {
     await fetch(`/api/races/${raceId}`, {
@@ -155,52 +139,7 @@ export default function DashboardPage() {
                 )}
               </button>
 
-              {/* Publish (draft only) */}
-              {race.status === "draft" && (
-                <button
-                  onClick={() => publishRace(race.id)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-100 border border-blue text-gray-500 text-xs font-medium hover:bg-blue-200 transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" />
-                    <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z" />
-                  </svg>
-                  Publish
-                </button>
-              )}
-              {/* Unpublish (pending only) */}
-              {race.status === "pending" && (
-                <button
-                  onClick={() => unpublishRace(race.id)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-100 border border-gray-200 text-gray-500 text-xs font-medium hover:bg-gray-200 transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" />
-                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                  </svg>
-                  Unpublish
-                </button>
-              )}
+              {/* status publish/unpublish removed; use visibility toggle instead */}
               {/* Edit */}
               <Link
                 href={`/admin/races/${race.id}/edit`}

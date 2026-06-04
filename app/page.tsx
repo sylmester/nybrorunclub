@@ -7,6 +7,7 @@ export default async function Home() {
   const { data: races } = await supabaseAdmin
     .from("races")
     .select("*")
+    .eq("is_visible", true)
     .eq("status", "active")
     .order("date", { ascending: true })
     .limit(3);

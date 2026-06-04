@@ -1,4 +1,4 @@
-export type RaceStatus = "draft" | "pending" | "active" | "finished";
+export type RaceStatus = "pending" | "active" | "finished";
 
 export interface RaceCategory {
   name: string;

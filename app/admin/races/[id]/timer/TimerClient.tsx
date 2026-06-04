@@ -105,16 +105,6 @@ export default function TimerClient({
     setTimeout(() => setFeedback(null), 5000);
   }, []);
 
-  // Publish
-  async function publishRace() {
-    const res = await fetch(`/api/races/${race.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "pending" }),
-    });
-    setRace(await res.json());
-  }
-
   // Start
   async function startRace() {
     const res = await fetch(`/api/races/${race.id}`, {
@@ -351,14 +341,6 @@ export default function TimerClient({
             {formatTime(elapsed)}
           </div>
           <div className="mt-2">
-            {race.status === "draft" && (
-              <button
-                onClick={publishRace}
-                className="bg-blue-100 text-gray-500 px-6 py-2 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-40 text-sm border border-blue"
-              >
-                Publish race
-              </button>
-            )}
             {race.status === "pending" && (
               <button
                 onClick={startRace}
@@ -498,7 +480,7 @@ export default function TimerClient({
       )}
 
       {/* Add runners */}
-      {(race.status === "pending" || race.status === "draft") && (
+      {race.status === "pending" && (
         <div className="mb-8 p-4 border border-gray-200 rounded-lg space-y-4">
           <h2 className="font-medium">Add runners</h2>
           <form onSubmit={addRunner} className="flex flex-col gap-2">
@@ -644,7 +626,7 @@ export default function TimerClient({
                     {row.finished && <span className="ml-1">✓</span>}
                   </td>
                   <td className="py-3 text-right">
-                    {(race.status === "pending" || race.status === "draft") && (
+                    {race.status === "pending" && (
                       <button
                         onClick={() =>
                           removeRunner(row.runner.id, row.runner.bib_number)
