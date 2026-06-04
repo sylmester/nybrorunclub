@@ -61,7 +61,17 @@ export default function TimerClient({
 
   // Timer
   useEffect(() => {
-    if (race.status !== "active" || !race.started_at) return;
+    if (!race.started_at) return;
+
+    if (race.status === "finished" && race.ended_at) {
+      setElapsed(
+        new Date(race.ended_at).getTime() - new Date(race.started_at).getTime(),
+      );
+      return;
+    }
+
+    if (race.status !== "active") return;
+
     const tick = () =>
       setElapsed(Date.now() - new Date(race.started_at!).getTime());
     tick();
@@ -69,7 +79,7 @@ export default function TimerClient({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [race.status, race.started_at]);
+  }, [race.status, race.started_at, race.ended_at]);
 
   // Keyboard input
   useEffect(() => {
@@ -118,13 +128,14 @@ export default function TimerClient({
     setRace(await res.json());
   }
 
-  // Finish
   async function finishRace() {
-    if (!confirm("Mark this race as finished?")) return;
     const res = await fetch(`/api/races/${race.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "finished" }),
+      body: JSON.stringify({
+        status: "finished",
+        ended_at: new Date().toISOString(),
+      }),
     });
     setRace(await res.json());
   }
