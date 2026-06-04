@@ -17,6 +17,7 @@ export interface Race {
   created_at: string;
   categories: RaceCategory[];
   ended_at: string | null;
+  is_visible: boolean;
 }
 
 export interface Runner {

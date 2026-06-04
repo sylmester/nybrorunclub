@@ -52,6 +52,15 @@ export default function DashboardPage() {
     fetchRaces();
   }
 
+  async function toggleVisibility(raceId: string, current: boolean) {
+    await fetch(`/api/races/${raceId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ is_visible: !current }),
+    });
+    fetchRaces();
+  }
+
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto">
       <div className="flex justify-between items-center mb-8">
@@ -105,8 +114,46 @@ export default function DashboardPage() {
               >
                 {race.status}
               </span>
-
               <div className="w-px h-4 bg-gray-200 mx-1" />
+
+              {/* Visibility toggle */}
+              <button
+                onClick={() => toggleVisibility(race.id, race.is_visible)}
+                className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                title={race.is_visible ? "Hide from public" : "Show to public"}
+              >
+                {race.is_visible ? (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                )}
+              </button>
 
               {/* Publish (draft only) */}
               {race.status === "draft" && (
@@ -154,7 +201,6 @@ export default function DashboardPage() {
                   Unpublish
                 </button>
               )}
-
               {/* Edit */}
               <Link
                 href={`/admin/races/${race.id}/edit`}
@@ -176,7 +222,6 @@ export default function DashboardPage() {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
               </Link>
-
               {/* Timer */}
               <Link
                 href={`/admin/races/${race.id}/timer`}
@@ -198,7 +243,6 @@ export default function DashboardPage() {
                 </svg>
                 Timer
               </Link>
-
               {/* Delete */}
               <button
                 onClick={() => deleteRace(race.id, race.name)}

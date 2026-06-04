@@ -6,7 +6,7 @@ export default async function RacesPage() {
   const { data: races } = await supabaseAdmin
     .from("races")
     .select("*")
-    .neq("status", "draft")
+    .eq("is_visible", true)
     .order("date", { ascending: false });
 
   const active = races?.filter((r) => r.status === "active") ?? [];
