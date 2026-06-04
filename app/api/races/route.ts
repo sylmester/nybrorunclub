@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       lap_distance_m: body.lap_distance_m,
       categories: body.categories ?? [],
       description: body.description ?? null,
+      status: "draft",
     })
     .select()
     .single();

@@ -16,7 +16,9 @@ export default async function RacePage({
     .eq("id", id)
     .single();
 
-  if (!race) notFound();
+  if (!race || race.status === "draft") {
+    notFound(); // returns 404 to the public
+  }
 
   const { data: runners } = await supabase
     .from("runners")
