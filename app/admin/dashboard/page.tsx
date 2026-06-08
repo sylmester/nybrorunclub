@@ -304,7 +304,7 @@ export default function DashboardPage() {
                     className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
                     title={post.is_visible ? "Unpublish" : "Publish"}
                   >
-                    {post.is_visible ? <EyeOffIcon /> : <EyeIcon />}
+                    {post.is_visible ? <EyeIcon /> : <EyeOffIcon />}
                   </button>
                   <Link
                     href={`/admin/posts/${post.id}/edit`}
