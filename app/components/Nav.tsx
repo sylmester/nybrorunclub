@@ -35,6 +35,12 @@ export default function Nav() {
           >
             Races
           </Link>
+          <Link
+            href="/blog"
+            className={`text-sm transition-colors ${pathname.startsWith("/blog") ? "text-black" : "text-gray-400 hover:text-black"}`}
+          >
+            Blog
+          </Link>
         </div>
       </div>
     </nav>

@@ -39,3 +39,16 @@ export interface Lap {
   recorded_at: string;
   elapsed_ms: number;
 }
+
+export type Post = {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string | null;
+  content: string;
+  hero_image_url: string | null;
+  is_visible: boolean;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
