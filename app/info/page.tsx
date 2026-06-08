@@ -2,98 +2,116 @@ export default function InfoPage() {
   return (
     <main className="max-w-2xl mx-auto px-8 py-16">
       <h1 className="text-3xl font-medium mb-2">Nybrogård Running Club</h1>
-      <p className="text-gray-500 mb-12">Last updated June 1, 2026</p>
 
       <section className="mb-10">
         <h2 className="font-medium mb-3">Welcome</h2>
         <p className="text-gray-600 leading-relaxed">
           Do you feel like running a little (or a lot), meeting new people, and
           maybe finally training for a half marathon? Then Nybrogård Running
-          Club is the place for you! Everyone is welcome. We often run together
-          towards Bagsværd Stadium, where you can do laps at your own pace. We
-          also join various social runs in Lyngby and the surrounding area.
+          Club is the place for you. Everyone is welcome. We often run together
+          towards Bagsværd Stadium, where you can do laps at your own pace, and
+          we join various social runs in Lyngby and the surrounding area.
         </p>
       </section>
 
       <section className="mb-10">
-        <h2 className="font-medium mb-3">Training & events</h2>
+        <h2 className="font-medium mb-3">Weekly runs</h2>
         <p className="text-gray-600 leading-relaxed mb-4">
-          We use the app <strong>Spond</strong> to coordinate our runs and
-          events. Join us here:
+          We use <strong>Spond</strong> to coordinate our weekly runs and
+          events. Sign up for runs, sync events to your calendar, or arrange
+          your own run for others to join.
         </p>
         <a
           href="https://spond.com/invite/AZGQT"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block border border-gray-200 rounded-lg px-4 py-2 text-sm hover:border-gray-400 transition-colors mb-4"
+          className="inline-block border border-gray-200 rounded-lg px-4 py-2 text-sm hover:border-gray-400 transition-colors"
         >
           Join on Spond →
         </a>
-        <p className="text-gray-600 leading-relaxed mb-2">
-          Through Spond you can:
-        </p>
-        <ul className="text-gray-600 flex flex-col gap-1 ml-4">
-          <li className="before:content-['–'] before:mr-2 before:text-gray-400">
-            Sign up for runs
-          </li>
-          <li className="before:content-['–'] before:mr-2 before:text-gray-400">
-            Sync events to your own calendar
-          </li>
-          <li className="before:content-['–'] before:mr-2 before:text-gray-400">
-            Create your own runs for others to join
-          </li>
-        </ul>
-        <p className="text-gray-500 text-sm mt-4">
-          We encourage members to join at least once a month — and to
-          temporarily leave if you need a break, until you're ready to run
-          again.
-        </p>
       </section>
 
       <section className="mb-10">
-        <h2 className="font-medium mb-3">Annual race — Nybrogård Motionsløb</h2>
+        <h2 className="font-medium mb-3">Nybrogård Motionsløb</h2>
         <p className="text-gray-600 leading-relaxed mb-4">
-          Every year we host the Nybrogård Motionsløb. The route goes around
-          Bagsværd Lake, where you can run 1, 2, or 3 laps (7, 14, or 21 km).
-          Great atmosphere, cheering crowds, and prizes from local sponsors.
+          Once a year we host Nybrogård Motionsløb — a race around Bagsværd Lake
+          with distances of 7, 14, and 21 km. Great atmosphere, local sponsors,
+          and runners of all levels. Friends from outside the club are welcome
+          too.
         </p>
-        <p className="text-gray-500 text-sm mb-4">
-          Friends from outside the club are welcome too — they simply pay 30 DKK
-          to support the event.
+        <p className="text-gray-600 leading-relaxed mb-6">
+          Registration typically opens a few months before the race. Follow us
+          on social media or join Spond to be notified when sign-up opens.
         </p>
         <div className="flex flex-col gap-2">
           <a
-            href="https://forms.gle/fS1Gr98i2F6FRyhQ8"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/races"
             className="inline-block border border-gray-200 rounded-lg px-4 py-2 text-sm hover:border-gray-400 transition-colors w-fit"
           >
-            Sign up for the 2026 race →
+            See race results →
           </a>
           <a
-            href="https://forms.gle/qMaya5rStq3i9Yfo9"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="/blog"
             className="inline-block border border-gray-200 rounded-lg px-4 py-2 text-sm hover:border-gray-400 transition-colors w-fit"
           >
-            Sign up as a volunteer 2026 →
+            Read the blog →
           </a>
-          <a
-            href="https://www.facebook.com/groups/1303073057743171"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block border border-gray-200 rounded-lg px-4 py-2 text-sm hover:border-gray-400 transition-colors w-fit"
-          >
-            Facebook group →
-          </a>
+          <div className="flex items-center gap-4 mt-2">
+            <a
+              href="https://www.facebook.com/groups/1303073057743171"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
+              </svg>
+              Facebook
+            </a>
+            <a
+              href="https://www.instagram.com/nybrorunclub"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle
+                  cx="17.5"
+                  cy="6.5"
+                  r="0.5"
+                  fill="currentColor"
+                  stroke="none"
+                />
+              </svg>
+              Instagram
+            </a>
+          </div>
         </div>
       </section>
 
       <section className="mb-10">
-        <h2 className="font-medium mb-3">Want to help build the tradition?</h2>
+        <h2 className="font-medium mb-3">Get involved</h2>
         <p className="text-gray-600 leading-relaxed">
-          Interested in helping shape the annual race or the club itself? Come
-          join us on a run or send us a message.
+          Interested in helping shape the race or the club? Come join us on a
+          run or reach out — we are always happy to have more people involved.
         </p>
       </section>
 
