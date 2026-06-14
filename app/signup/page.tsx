@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 const HALLWAYS = [
   "AB-lige",
@@ -39,7 +40,7 @@ type Race = {
   available_laps: number[];
 };
 
-export default function SignupPage() {
+function SignupForm() {
   const searchParams = useSearchParams();
   const preselectedRaceId = searchParams.get("race");
 
@@ -392,5 +393,22 @@ export default function SignupPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="max-w-lg mx-auto px-4 py-12">
+          <div className="mb-8">
+            <h1 className="text-2xl font-medium mb-2">Sign up</h1>
+          </div>
+          <div className="text-sm text-gray-400">Loading...</div>
+        </main>
+      }
+    >
+      <SignupForm />
+    </Suspense>
   );
 }
