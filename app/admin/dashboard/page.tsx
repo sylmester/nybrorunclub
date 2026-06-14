@@ -19,7 +19,6 @@ const statusColors: Record<Race["status"], string> = {
   finished: "bg-gray-100 text-gray-500",
 };
 
-// Shared SVGs
 const EditIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -90,7 +89,10 @@ const EyeOffIcon = () => (
   </svg>
 );
 
+type Tab = "races" | "posts";
+
 export default function DashboardPage() {
+  const [tab, setTab] = useState<Tab>("races");
   const [races, setRaces] = useState<Race[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
 
@@ -144,188 +146,233 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen p-8 max-w-4xl mx-auto">
-      <div className="mb-10">
+      <div className="mb-8">
         <h1 className="text-3xl font-medium">Dashboard</h1>
         <p className="text-gray-500 mt-1">Nybrogård Løbeklub</p>
       </div>
 
-      {/* ── Races ── */}
-      <section className="mb-10">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium">Races</h2>
-          <Link
-            href="/admin/races/new"
-            className="inline-flex items-center gap-1.5 bg-black text-white px-3.5 py-2 rounded-lg hover:opacity-80 transition-opacity text-sm font-medium"
+      {/* Tabs */}
+      <div className="flex gap-1 mb-8 border-b border-gray-100">
+        {(["races", "posts"] as Tab[]).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+              tab === t
+                ? "border-black text-black"
+                : "border-transparent text-gray-400 hover:text-gray-700"
+            }`}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-            New race
-          </Link>
-        </div>
+            {t}
+          </button>
+        ))}
+      </div>
 
-        {!races?.length ? (
-          <p className="text-gray-400 text-sm">No races yet.</p>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {races.map((race) => (
-              <div
-                key={race.id}
-                className="border border-gray-200 rounded-xl px-4 py-3.5 flex justify-between items-center"
+      {/* ── Races ── */}
+      {tab === "races" && (
+        <section>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-medium">Races</h2>
+            <Link
+              href="/admin/races/new"
+              className="inline-flex items-center gap-1.5 bg-black text-white px-3.5 py-2 rounded-lg hover:opacity-80 transition-opacity text-sm font-medium"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <div>
-                  <p className="font-medium text-sm">{race.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {new Date(race.date).toLocaleDateString("da-DK")} ·{" "}
-                    {race.laps_count} laps · {race.lap_distance_m}m
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${statusColors[race.status]}`}
-                  >
-                    {race.status}
-                  </span>
-                  <div className="w-px h-4 bg-gray-200 mx-1" />
-                  <button
-                    onClick={() =>
-                      toggleRaceVisibility(race.id, race.is_visible)
-                    }
-                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                    title={race.is_visible ? "Hide" : "Show"}
-                  >
-                    {race.is_visible ? <EyeIcon /> : <EyeOffIcon />}
-                  </button>
-                  <Link
-                    href={`/admin/races/${race.id}/edit`}
-                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                    title="Edit"
-                  >
-                    <EditIcon />
-                  </Link>
-                  <Link
-                    href={`/admin/races/${race.id}/timer`}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <polygon points="10 8 16 12 10 16 10 8" />
-                    </svg>
-                    Timer
-                  </Link>
-                  <button
-                    onClick={() => deleteRace(race.id, race.name)}
-                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="Delete"
-                  >
-                    <DeleteIcon />
-                  </button>
-                </div>
-              </div>
-            ))}
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+              New race
+            </Link>
           </div>
-        )}
-      </section>
+
+          {!races?.length ? (
+            <p className="text-gray-400 text-sm">No races yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {races.map((race) => (
+                <div
+                  key={race.id}
+                  className="border border-gray-200 rounded-xl px-4 py-3.5 flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-medium text-sm">{race.name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(race.date).toLocaleDateString("da-DK")} ·{" "}
+                      {race.laps_count} laps · {race.lap_distance_m}m
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${statusColors[race.status]}`}
+                    >
+                      {race.status}
+                    </span>
+                    <div className="w-px h-4 bg-gray-200 mx-1" />
+                    <button
+                      onClick={() =>
+                        toggleRaceVisibility(race.id, race.is_visible)
+                      }
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                      title={race.is_visible ? "Hide" : "Show"}
+                    >
+                      {race.is_visible ? <EyeIcon /> : <EyeOffIcon />}
+                    </button>
+                    <Link
+                      href={`/admin/races/${race.id}/edit`}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                      title="Edit"
+                    >
+                      <EditIcon />
+                    </Link>
+                    <Link
+                      href={`/admin/races/${race.id}/timer`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <polygon points="10 8 16 12 10 16 10 8" />
+                      </svg>
+                      Timer
+                    </Link>
+
+                    <Link
+                      href={`/admin/races/${race.id}/participants`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
+                      Participants
+                    </Link>
+
+                    <button
+                      onClick={() => deleteRace(race.id, race.name)}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Delete"
+                    >
+                      <DeleteIcon />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Blog Posts ── */}
-      <section>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-medium">Blog Posts</h2>
-          <Link
-            href="/admin/posts/new"
-            className="inline-flex items-center gap-1.5 bg-black text-white px-3.5 py-2 rounded-lg hover:opacity-80 transition-opacity text-sm font-medium"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+      {tab === "posts" && (
+        <section>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-medium">Blog Posts</h2>
+            <Link
+              href="/admin/posts/new"
+              className="inline-flex items-center gap-1.5 bg-black text-white px-3.5 py-2 rounded-lg hover:opacity-80 transition-opacity text-sm font-medium"
             >
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-            New post
-          </Link>
-        </div>
-
-        {!posts?.length ? (
-          <p className="text-gray-400 text-sm">No posts yet.</p>
-        ) : (
-          <div className="flex flex-col gap-2.5">
-            {posts.map((post) => (
-              <div
-                key={post.id}
-                className="border border-gray-200 rounded-xl px-4 py-3.5 flex justify-between items-center"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <div>
-                  <p className="font-medium text-sm">{post.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {post.published_at
-                      ? `Published ${new Date(post.published_at).toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" })}`
-                      : `Created ${new Date(post.created_at).toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" })}`}
-                    {" · "}/blog/{post.slug}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${post.is_visible ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
-                  >
-                    {post.is_visible ? "Published" : "Draft"}
-                  </span>
-                  <div className="w-px h-4 bg-gray-200 mx-1" />
-                  <button
-                    onClick={() =>
-                      togglePostVisibility(post.id, post.is_visible)
-                    }
-                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                    title={post.is_visible ? "Unpublish" : "Publish"}
-                  >
-                    {post.is_visible ? <EyeIcon /> : <EyeOffIcon />}
-                  </button>
-                  <Link
-                    href={`/admin/posts/${post.id}/edit`}
-                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                    title="Edit"
-                  >
-                    <EditIcon />
-                  </Link>
-                  <button
-                    onClick={() => deletePost(post.id, post.title)}
-                    className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
-                    title="Delete"
-                  >
-                    <DeleteIcon />
-                  </button>
-                </div>
-              </div>
-            ))}
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+              New post
+            </Link>
           </div>
-        )}
-      </section>
+
+          {!posts?.length ? (
+            <p className="text-gray-400 text-sm">No posts yet.</p>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {posts.map((post) => (
+                <div
+                  key={post.id}
+                  className="border border-gray-200 rounded-xl px-4 py-3.5 flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-medium text-sm">{post.title}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {post.published_at
+                        ? `Published ${new Date(post.published_at).toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" })}`
+                        : `Created ${new Date(post.created_at).toLocaleDateString("da-DK", { day: "numeric", month: "short", year: "numeric" })}`}
+                      {" · "}/blog/{post.slug}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium ${post.is_visible ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+                    >
+                      {post.is_visible ? "Published" : "Draft"}
+                    </span>
+                    <div className="w-px h-4 bg-gray-200 mx-1" />
+                    <button
+                      onClick={() =>
+                        togglePostVisibility(post.id, post.is_visible)
+                      }
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                      title={post.is_visible ? "Unpublish" : "Publish"}
+                    >
+                      {post.is_visible ? <EyeIcon /> : <EyeOffIcon />}
+                    </button>
+                    <Link
+                      href={`/admin/posts/${post.id}/edit`}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                      title="Edit"
+                    >
+                      <EditIcon />
+                    </Link>
+                    <button
+                      onClick={() => deletePost(post.id, post.title)}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-red-300 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      title="Delete"
+                    >
+                      <DeleteIcon />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
     </main>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
-import { Race, Runner, Lap } from "@/types";
+import { Race, Participant, Lap } from "@/types";
 
 function formatTime(ms: number) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -16,12 +16,12 @@ function formatTime(ms: number) {
 
 interface Props {
   race: Race;
-  initialRunners: Runner[];
+  initialParticipants: Participant[];
   initialLaps: Lap[];
 }
 
-interface RunnerRow {
-  runner: Runner;
+interface ParticipantRow {
+  participant: Participant;
   lapsCompleted: number;
   targetLaps: number;
   lapTimes: Lap[];
@@ -30,23 +30,23 @@ interface RunnerRow {
 }
 
 function buildLeaderboard(
-  runners: Runner[],
+  participants: Participant[],
   laps: Lap[],
   defaultLaps: number,
-): RunnerRow[] {
-  return runners
-    .map((runner) => {
-      const runnerLaps = laps
-        .filter((l) => l.runner_id === runner.id)
+): ParticipantRow[] {
+  return participants
+    .map((participant) => {
+      const participantLaps = laps
+        .filter((l) => l.participant_id === participant.id)
         .sort((a, b) => a.lap_number - b.lap_number);
-      const lapsCompleted = runnerLaps.length;
-      const targetLaps = runner.laps_count ?? defaultLaps;
-      const lastLap = runnerLaps[runnerLaps.length - 1];
+      const lapsCompleted = participantLaps.length;
+      const targetLaps = participant.laps_count ?? defaultLaps;
+      const lastLap = participantLaps[participantLaps.length - 1];
       return {
-        runner,
+        participant,
         lapsCompleted,
         targetLaps,
-        lapTimes: runnerLaps,
+        lapTimes: participantLaps,
         lastElapsed: lastLap?.elapsed_ms ?? null,
         finished: lapsCompleted >= targetLaps,
       };
@@ -63,73 +63,79 @@ function buildLeaderboard(
 }
 
 function computeStats(
-  runners: Runner[],
+  participants: Participant[],
   laps: Lap[],
-  leaderboard: RunnerRow[],
+  leaderboard: ParticipantRow[],
   race: Race,
 ) {
   const finishers = leaderboard.filter((r) => r.finished);
-  const totalDistanceM = runners.reduce((sum, runner) => {
-    const count = laps.filter((l) => l.runner_id === runner.id).length;
+  const totalDistanceM = participants.reduce((sum, participant) => {
+    const count = laps.filter(
+      (l) => l.participant_id === participant.id,
+    ).length;
     return sum + count * race.lap_distance_m;
   }, 0);
-  // Fastest single lap (difference between consecutive elapsed times)
-  let fastestLapMs: number | null = null;
-  let fastestLapRunner: Runner | null = null;
 
-  runners.forEach((runner) => {
-    const runnerLaps = laps
-      .filter((l) => l.runner_id === runner.id)
+  let fastestLapMs: number | null = null;
+  let fastestLapParticipant: Participant | null = null;
+
+  participants.forEach((participant) => {
+    const participantLaps = laps
+      .filter((l) => l.participant_id === participant.id)
       .sort((a, b) => a.lap_number - b.lap_number);
 
-    runnerLaps.forEach((lap, i) => {
+    participantLaps.forEach((lap, i) => {
       const lapDuration =
         i === 0
           ? lap.elapsed_ms
-          : lap.elapsed_ms - runnerLaps[i - 1].elapsed_ms;
+          : lap.elapsed_ms - participantLaps[i - 1].elapsed_ms;
       if (fastestLapMs === null || lapDuration < fastestLapMs) {
         fastestLapMs = lapDuration;
-        fastestLapRunner = runner;
+        fastestLapParticipant = participant;
       }
     });
   });
+
   const avgFinishMs = finishers.length
     ? finishers.reduce((sum, r) => sum + (r.lastElapsed ?? 0), 0) /
       finishers.length
     : null;
+
   const teamMap = new Map<string, number>();
-  runners.forEach((runner) => {
-    const team = runner.team ?? "No team";
-    const lapCount = laps.filter((l) => l.runner_id === runner.id).length;
+  participants.forEach((participant) => {
+    const team = participant.team ?? "No team";
+    const lapCount = laps.filter(
+      (l) => l.participant_id === participant.id,
+    ).length;
     teamMap.set(
       team,
       (teamMap.get(team) ?? 0) + lapCount * race.lap_distance_m,
     );
   });
+
   const teamStats = Array.from(teamMap.entries())
     .map(([name, distM]) => ({ name, distM }))
     .sort((a, b) => b.distM - a.distM)
     .slice(0, 5);
+
   const maxTeamDist = teamStats[0]?.distM ?? 1;
-  const categories = race.categories?.length
-    ? race.categories
-    : [{ name: "All", laps_count: race.laps_count }];
-  const categoryStats = categories.map((cat) => ({
-    name: cat.name,
-    laps_count: cat.laps_count,
-    finishers: leaderboard.filter(
-      (r) =>
-        r.runner.gender === cat.name &&
-        r.runner.laps_count === cat.laps_count &&
-        r.finished,
-    ).length,
-  }));
+
+  const categoryStats = (race.available_laps ?? [race.laps_count]).map(
+    (laps) => ({
+      name: `${((laps * race.lap_distance_m) / 1000).toFixed(0)} km`,
+      laps_count: laps,
+      finishers: leaderboard.filter(
+        (r) => r.participant.laps_count === laps && r.finished,
+      ).length,
+    }),
+  );
+
   return {
     finishers: finishers.length,
-    total: runners.length,
+    total: participants.length,
     totalDistanceM,
     fastestLapMs,
-    fastestLapRunner: fastestLapRunner as Runner | null,
+    fastestLapParticipant: fastestLapParticipant as Participant | null,
     avgFinishMs,
     teamStats,
     maxTeamDist,
@@ -139,19 +145,23 @@ function computeStats(
 
 export default function LiveLeaderboard({
   race,
-  initialRunners,
+  initialParticipants,
   initialLaps,
 }: Props) {
   const [laps, setLaps] = useState<Lap[]>(initialLaps);
-  const [runners] = useState<Runner[]>(initialRunners);
+  const [participants] = useState<Participant[]>(initialParticipants);
   const [tab, setTab] = useState<"leaderboard" | "stats">("leaderboard");
   const [filterGender, setFilterGender] = useState("");
   const [filterDistance, setFilterDistance] = useState("");
   const [filterTeam, setFilterTeam] = useState("");
 
-  const maxLaps = Math.max(
-    ...(race.categories?.map((c) => c.laps_count) ?? [race.laps_count]),
-  );
+  const isPending = race.status === "pending";
+  const isActive = race.status === "active";
+  const isFinished = race.status === "finished";
+
+  const maxLaps = race?.available_laps?.length
+    ? Math.max(...race.available_laps)
+    : race.laps_count;
 
   useEffect(() => {
     if (race.status !== "active") return;
@@ -176,39 +186,46 @@ export default function LiveLeaderboard({
   }, [race.id, race.status]);
 
   const leaderboard = useMemo(
-    () => buildLeaderboard(runners, laps, race.laps_count),
-    [runners, laps, race.laps_count],
-  );
-  const stats = useMemo(
-    () => computeStats(runners, laps, leaderboard, race),
-    [runners, laps, leaderboard, race],
+    () => buildLeaderboard(participants, laps, race.laps_count),
+    [participants, laps, race.laps_count],
   );
 
-  // Unique filter options derived from actual runner data
+  const stats = useMemo(
+    () => computeStats(participants, laps, leaderboard, race),
+    [participants, laps, leaderboard, race],
+  );
+
   const genderOptions = useMemo(
     () =>
-      [...new Set(runners.map((r) => r.gender).filter(Boolean))] as string[],
-    [runners],
+      [
+        ...new Set(participants.map((p) => p.gender).filter(Boolean)),
+      ] as string[],
+    [participants],
   );
   const distanceOptions = useMemo(
     () =>
-      [...new Set(runners.map((r) => r.laps_count).filter(Boolean))].sort(
+      [...new Set(participants.map((p) => p.laps_count).filter(Boolean))].sort(
         (a, b) => (a ?? 0) - (b ?? 0),
       ) as number[],
-    [runners],
+    [participants],
   );
   const teamOptions = useMemo(
-    () => [...new Set(runners.map((r) => r.team).filter(Boolean))] as string[],
-    [runners],
+    () =>
+      [...new Set(participants.map((p) => p.team).filter(Boolean))] as string[],
+    [participants],
   );
 
   const filtered = useMemo(
     () =>
       leaderboard.filter((row) => {
-        if (filterGender && row.runner.gender !== filterGender) return false;
-        if (filterDistance && row.runner.laps_count !== Number(filterDistance))
+        if (filterGender && row.participant.gender !== filterGender)
           return false;
-        if (filterTeam && row.runner.team !== filterTeam) return false;
+        if (
+          filterDistance &&
+          row.participant.laps_count !== Number(filterDistance)
+        )
+          return false;
+        if (filterTeam && row.participant.team !== filterTeam) return false;
         return true;
       }),
     [leaderboard, filterGender, filterDistance, filterTeam],
@@ -217,33 +234,33 @@ export default function LiveLeaderboard({
   const isFiltered = filterGender || filterDistance || filterTeam;
 
   function exportCsv() {
-    const lapHeaders = Array.from(
-      { length: maxLaps },
-      (_, i) => `Lap ${i + 1}`,
-    );
     const headers = [
       "Pos",
-      "Bib",
-      "Participant",
-      "Category",
+      "Name",
+      "Gender",
       "Team",
-      "Country",
+      "Distance",
       "Finish time",
-      ...lapHeaders,
     ];
-    const rows = filtered.map((row, i) => [
-      i + 1,
-      row.runner.bib_number,
-      row.runner.name ?? "",
-      row.runner.gender ?? "",
-      row.runner.team ?? "",
-      row.runner.country ?? "",
-      row.lastElapsed ? formatTime(row.lastElapsed) : "",
-      ...Array.from({ length: maxLaps }, (_, j) =>
-        row.lapTimes[j] ? formatTime(row.lapTimes[j].elapsed_ms) : "",
-      ),
-    ]);
-    const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
+    if (isActive || isFinished) headers.splice(1, 0, "Bib");
+    const rows = filtered.map((row, i) => {
+      const base = [
+        i + 1,
+        row.participant.name ?? "",
+        row.participant.gender ?? "",
+        row.participant.team ?? "",
+        row.targetLaps
+          ? `${((row.targetLaps * race.lap_distance_m) / 1000).toFixed(0)} km`
+          : "",
+        row.lastElapsed ? formatTime(row.lastElapsed) : "",
+      ];
+      if (isActive || isFinished)
+        base.splice(1, 0, row.participant.bib_number ?? "");
+      return base;
+    });
+    const csv = [headers, ...rows]
+      .map((r) => r.map((v) => `"${v}"`).join(","))
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -253,9 +270,62 @@ export default function LiveLeaderboard({
     URL.revokeObjectURL(url);
   }
 
-  if (!runners.length)
-    return <p className="text-gray-400">No runners registered yet.</p>;
+  // Pending state — show signup list without timing info
+  if (isPending) {
+    return (
+      <div>
+        {race.description && (
+          <p className="text-gray-500 mb-6 leading-relaxed">
+            {race.description}
+          </p>
+        )}
+        {participants.length === 0 ? (
+          <p className="text-gray-400">No participants signed up yet.</p>
+        ) : (
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">
+              {participants.length} participant
+              {participants.length !== 1 ? "s" : ""} registered
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-400 border-b border-gray-100">
+                    <th className="pb-2 pr-3">#</th>
+                    <th className="pb-2 pr-3">Name</th>
+                    <th className="pb-2 pr-3">Gender</th>
+                    <th className="pb-2 pr-3">Team</th>
+                    <th className="pb-2 pr-3 text-right">Distance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {participants.map((p, i) => (
+                    <tr key={p.id} className="border-b border-gray-50">
+                      <td className="py-3 pr-3 text-gray-400">{i + 1}</td>
+                      <td className="py-3 pr-3 font-medium">{p.name}</td>
+                      <td className="py-3 pr-3 text-gray-500">
+                        {p.gender ?? "—"}
+                      </td>
+                      <td className="py-3 pr-3 text-gray-500">
+                        {p.team ?? "—"}
+                      </td>
+                      <td className="py-3 pr-3 text-right text-gray-500">
+                        {p.laps_count
+                          ? `${((p.laps_count * race.lap_distance_m) / 1000).toFixed(0)} km`
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
+  // Active / finished state — full leaderboard with timing
   return (
     <div>
       {race.description && (
@@ -264,7 +334,6 @@ export default function LiveLeaderboard({
 
       <hr className="my-6 border-gray-100" />
 
-      {/* Tab bar */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex gap-1">
           <button
@@ -280,17 +349,14 @@ export default function LiveLeaderboard({
             Statistics
           </button>
         </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={exportCsv}
-            className="text-sm text-gray-500 hover:text-black transition-colors"
-          >
-            Export CSV ↓
-          </button>
-        </div>
+        <button
+          onClick={exportCsv}
+          className="text-sm text-gray-500 hover:text-black transition-colors"
+        >
+          Export CSV ↓
+        </button>
       </div>
 
-      {/* Leaderboard tab */}
       {tab === "leaderboard" && (
         <div>
           {/* Filters */}
@@ -352,75 +418,89 @@ export default function LiveLeaderboard({
             )}
           </div>
 
-          {/* Unified table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-400 border-b border-gray-100">
-                  <th className="pb-2 pr-3">Pos.</th>
-                  <th className="pb-2 pr-3">Bib</th>
-                  <th className="pb-2 pr-3">Participant</th>
-                  <th className="pb-2 pr-3">Category</th>
+                  {isFinished && <th className="pb-2 pr-3">Pos.</th>}
+                  {(isActive || isFinished) && (
+                    <th className="pb-2 pr-3">Bib</th>
+                  )}
+                  <th className="pb-2 pr-3">Name</th>
+                  <th className="pb-2 pr-3">Gender</th>
                   <th className="pb-2 pr-3">Team</th>
-                  <th className="pb-2 pr-3">Country</th>
                   <th className="pb-2 pr-3 text-right">Distance</th>
-                  <th className="pb-2 pr-3 text-right">Finish time</th>
-                  {Array.from({ length: maxLaps }, (_, j) => (
-                    <th key={j} className="pb-2 pr-3 text-right">
-                      Lap {j + 1}
-                    </th>
-                  ))}
+                  {(isActive || isFinished) && (
+                    <>
+                      <th className="pb-2 pr-3 text-right">Progress</th>
+                      <th className="pb-2 pr-3 text-right">Finish time</th>
+                      {isFinished &&
+                        Array.from({ length: maxLaps }, (_, j) => (
+                          <th key={j} className="pb-2 pr-3 text-right">
+                            Lap {j + 1}
+                          </th>
+                        ))}
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((row, i) => (
                   <tr
-                    key={row.runner.id}
+                    key={row.participant.id}
                     className={`border-b border-gray-50 ${row.finished ? "text-green-700" : ""}`}
                   >
-                    <td className="py-3 pr-3 text-gray-400">{i + 1}</td>
-                    <td className="py-3 pr-3 font-mono font-medium">
-                      {row.runner.bib_number}
+                    {isFinished && (
+                      <td className="py-3 pr-3 text-gray-400">{i + 1}</td>
+                    )}
+                    {(isActive || isFinished) && (
+                      <td className="py-3 pr-3 font-mono font-medium">
+                        {row.participant.bib_number ?? "—"}
+                      </td>
+                    )}
+                    <td className="py-3 pr-3 font-medium">
+                      {row.participant.name ?? "—"}
                     </td>
-                    <td className="py-3 pr-3">{row.runner.name ?? "—"}</td>
                     <td className="py-3 pr-3 text-gray-500">
-                      {row.runner.gender ?? "—"}
+                      {row.participant.gender ?? "—"}
                     </td>
                     <td className="py-3 pr-3 text-gray-500">
-                      {row.runner.team ?? "—"}
-                    </td>
-                    <td className="py-3 pr-3 text-gray-500">
-                      {row.runner.country ?? "—"}
+                      {row.participant.team ?? "—"}
                     </td>
                     <td className="py-3 pr-3 text-right text-gray-500">
-                      {row.runner.laps_count
-                        ? `${((row.runner.laps_count * race.lap_distance_m) / 1000).toFixed(0)} km`
+                      {row.targetLaps
+                        ? `${((row.targetLaps * race.lap_distance_m) / 1000).toFixed(0)} km`
                         : "—"}
                     </td>
-                    <td className="py-3 pr-3 text-right font-mono">
-                      {row.finished && row.lastElapsed
-                        ? formatTime(row.lastElapsed)
-                        : "—"}
-                    </td>
-                    {Array.from({ length: maxLaps }, (_, k) => (
-                      <td
-                        key={k}
-                        className="py-3 pr-3 text-right font-mono text-gray-400"
-                      >
-                        {row.lapTimes[k]
-                          ? formatTime(row.lapTimes[k].elapsed_ms)
-                          : "—"}
-                      </td>
-                    ))}
+                    {(isActive || isFinished) && (
+                      <>
+                        <td className="py-3 pr-3 text-right text-gray-500">
+                          {row.lapsCompleted}/{row.targetLaps}
+                        </td>
+                        <td className="py-3 pr-3 text-right font-mono">
+                          {row.finished && row.lastElapsed
+                            ? formatTime(row.lastElapsed)
+                            : "—"}
+                        </td>
+                        {isFinished &&
+                          Array.from({ length: maxLaps }, (_, k) => (
+                            <td
+                              key={k}
+                              className="py-3 pr-3 text-right font-mono text-gray-400"
+                            >
+                              {row.lapTimes[k]
+                                ? formatTime(row.lapTimes[k].elapsed_ms)
+                                : "—"}
+                            </td>
+                          ))}
+                      </>
+                    )}
                   </tr>
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td
-                      colSpan={8 + maxLaps}
-                      className="py-8 text-center text-gray-400"
-                    >
-                      No runners match the selected filters.
+                    <td colSpan={10} className="py-8 text-center text-gray-400">
+                      No participants match the selected filters.
                     </td>
                   </tr>
                 )}
@@ -430,7 +510,6 @@ export default function LiveLeaderboard({
         </div>
       )}
 
-      {/* Statistics tab */}
       {tab === "stats" && (
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">
@@ -455,10 +534,7 @@ export default function LiveLeaderboard({
                 {stats.fastestLapMs ? formatTime(stats.fastestLapMs) : "—"}
               </p>
               <p className="text-sm text-gray-400">
-                {stats.fastestLapRunner
-                  ? (stats.fastestLapRunner.name ??
-                    `Bib #${stats.fastestLapRunner.bib_number}`)
-                  : "—"}
+                {stats.fastestLapParticipant?.name ?? "—"}
               </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
@@ -510,7 +586,7 @@ export default function LiveLeaderboard({
                       {cat.name} ·{" "}
                       {((cat.laps_count * race.lap_distance_m) / 1000).toFixed(
                         0,
-                      )}
+                      )}{" "}
                       km
                     </p>
                     <p className="text-2xl font-medium">{cat.finishers}</p>

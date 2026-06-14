@@ -9,31 +9,34 @@ export async function POST(req: Request) {
 
   const { race_id, bib_number, elapsed_ms } = await req.json();
 
-  // Find the runner by bib number
-  const { data: runner } = await supabaseAdmin
-    .from("runners")
+  // Find the participant by bib number
+  const { data: participant } = await supabaseAdmin
+    .from("participants")
     .select("*")
     .eq("race_id", race_id)
     .eq("bib_number", bib_number)
     .single();
 
-  if (!runner)
-    return NextResponse.json({ error: "Runner not found" }, { status: 404 });
+  if (!participant)
+    return NextResponse.json(
+      { error: "Participant not found" },
+      { status: 404 },
+    );
 
   // Count existing laps to determine lap number
   const { count } = await supabaseAdmin
     .from("laps")
     .select("*", { count: "exact", head: true })
-    .eq("runner_id", runner.id);
+    .eq("participant_id", participant.id);
 
   const lap_number = (count ?? 0) + 1;
 
   const { data, error } = await supabaseAdmin
     .from("laps")
-    .insert({ race_id, runner_id: runner.id, lap_number, elapsed_ms })
+    .insert({ race_id, participant_id: participant.id, lap_number, elapsed_ms })
     .select()
     .single();
 
   if (error) return NextResponse.json({ error }, { status: 500 });
-  return NextResponse.json({ ...data, runner });
+  return NextResponse.json({ ...data, participant });
 }

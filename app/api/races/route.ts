@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  const session = await getServerSession();
+  if (!session)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { data, error } = await supabaseAdmin
     .from("races")
     .select("*")
@@ -25,7 +29,7 @@ export async function POST(req: Request) {
       date: body.date,
       laps_count: body.laps_count,
       lap_distance_m: body.lap_distance_m,
-      categories: body.categories ?? [],
+      available_laps: body.available_laps ?? [],
       description: body.description ?? null,
       status: "pending",
       is_visible: body.is_visible ?? false,

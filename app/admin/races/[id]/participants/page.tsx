@@ -1,9 +1,9 @@
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { notFound } from "next/navigation";
-import { Race, Participant, Lap } from "@/types";
-import TimerClient from "./TimerClient";
+import { Race, Participant } from "@/types";
+import ParticipantsClient from "./ParticipantsClient";
 
-export default async function TimerPage({
+export default async function ParticipantsPage({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -22,19 +22,12 @@ export default async function TimerPage({
     .from("participants")
     .select("*")
     .eq("race_id", id)
-    .order("bib_number");
-
-  const { data: laps } = await supabaseAdmin
-    .from("laps")
-    .select("*")
-    .eq("race_id", id)
-    .order("recorded_at", { ascending: true });
+    .order("created_at", { ascending: true });
 
   return (
-    <TimerClient
+    <ParticipantsClient
       race={race as Race}
       initialParticipants={(participants ?? []) as Participant[]}
-      initialLaps={(laps ?? []) as Lap[]}
     />
   );
 }

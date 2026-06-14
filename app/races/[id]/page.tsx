@@ -1,5 +1,5 @@
-import { supabase } from "@/lib/supabase";
-import { Race, Runner, Lap } from "@/types";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { Race, Lap, Participant } from "@/types";
 import LiveLeaderboard from "./LiveLeaderboard";
 import { notFound } from "next/navigation";
 
@@ -10,7 +10,7 @@ export default async function RacePage({
 }) {
   const { id } = await params;
 
-  const { data: race } = await supabase
+  const { data: race } = await supabaseAdmin
     .from("races")
     .select("*")
     .eq("id", id)
@@ -20,12 +20,13 @@ export default async function RacePage({
     notFound();
   }
 
-  const { data: runners } = await supabase
-    .from("runners")
-    .select("*")
-    .eq("race_id", id);
+  const { data: participants } = await supabaseAdmin
+    .from("participants")
+    .select("id, name, gender, team, bib_number, laps_count, race_id")
+    .eq("race_id", id)
+    .order("created_at", { ascending: true });
 
-  const { data: laps } = await supabase
+  const { data: laps } = await supabaseAdmin
     .from("laps")
     .select("*")
     .eq("race_id", id)
@@ -39,6 +40,25 @@ export default async function RacePage({
       >
         ← All races
       </a>
+
+      {race.status === "pending" && (
+        <div className="mb-6 flex items-center justify-between bg-gradient-to-r from-yellow-500 to-green-500 rounded-xl px-5 py-4">
+          <div>
+            <p className="text-white font-medium text-sm">
+              Registration is open!
+            </p>
+            <p className="text-white/70 text-xs mt-0.5">
+              Secure your spot for {race.name}
+            </p>
+          </div>
+          <a
+            href={`/signup?race=${race.id}`}
+            className="shrink-0 text-sm font-medium bg-white text-green-500 px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
+          >
+            Sign up →
+          </a>
+        </div>
+      )}
 
       <div className="flex items-center gap-3 mb-1">
         <h1 className="text-3xl font-medium">{race.name}</h1>
@@ -55,7 +75,7 @@ export default async function RacePage({
       </p>
       <LiveLeaderboard
         race={race as Race}
-        initialRunners={(runners ?? []) as Runner[]}
+        initialParticipants={(participants ?? []) as Participant[]}
         initialLaps={(laps ?? []) as Lap[]}
       />
     </main>
