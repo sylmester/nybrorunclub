@@ -14,6 +14,7 @@ type PostFormProps = {
     summary: string | null;
     content: string;
     hero_image_url: string | null;
+    images: string[] | null;
     is_visible: boolean;
   };
 };
@@ -29,9 +30,11 @@ export default function PostForm({ initialData }: PostFormProps) {
   const [heroImageUrl, setHeroImageUrl] = useState(
     initialData?.hero_image_url ?? "",
   );
+  const [images, setImages] = useState<string[]>(initialData?.images ?? []);
   const [isVisible, setIsVisible] = useState(initialData?.is_visible ?? false);
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingExtra, setUploadingExtra] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,6 +70,44 @@ export default function PostForm({ initialData }: PostFormProps) {
     setUploading(false);
   }
 
+  async function handleExtraImageUpload(
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingExtra(true);
+    setError(null);
+
+    const uploaded: string[] = [];
+
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/posts/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (data.error) {
+        setError(data.error);
+        break;
+      } else {
+        uploaded.push(data.url);
+      }
+    }
+
+    setImages((prev) => [...prev, ...uploaded]);
+    setUploadingExtra(false);
+    e.target.value = "";
+  }
+
+  function removeExtraImage(url: string) {
+    setImages((prev) => prev.filter((u) => u !== url));
+  }
+
   async function handleSubmit(publish: boolean) {
     setSaving(true);
     setError(null);
@@ -77,6 +118,7 @@ export default function PostForm({ initialData }: PostFormProps) {
       summary: summary || null,
       content,
       hero_image_url: heroImageUrl || null,
+      images,
       is_visible: publish,
     };
 
@@ -202,6 +244,7 @@ export default function PostForm({ initialData }: PostFormProps) {
                   alt="Hero"
                   fill
                   className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 672px"
                 />
               </div>
               <button
@@ -248,6 +291,75 @@ export default function PostForm({ initialData }: PostFormProps) {
               />
             </label>
           )}
+        </div>
+
+        {/* Extra images / slideshow */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Slideshow images{" "}
+            <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+
+          {images.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {images.map((url) => (
+                <div key={url} className="relative group">
+                  <div className="relative w-full aspect-video rounded-lg overflow-hidden border border-gray-200">
+                    <Image
+                      src={url}
+                      alt=""
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 33vw, 224px"
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeExtraImage(url)}
+                    className="absolute top-1.5 right-1.5 bg-white border border-gray-200 text-gray-500 hover:text-red-600 rounded-md px-1.5 py-0.5 text-xs font-medium shadow-sm transition-colors opacity-0 group-hover:opacity-100"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors">
+            {uploadingExtra ? (
+              <span className="text-sm text-gray-400">Uploading...</span>
+            ) : (
+              <>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-gray-300 mb-1.5"
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span className="text-sm text-gray-400">
+                  Click to add images{" "}
+                  <span className="text-gray-300">(select multiple)</span>
+                </span>
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={handleExtraImageUpload}
+              disabled={uploadingExtra}
+            />
+          </label>
         </div>
 
         {/* Content */}

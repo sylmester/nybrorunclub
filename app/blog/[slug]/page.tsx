@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ImageSlideshow from "@/app/components/ImageSlideshow";
 
 async function getPost(slug: string) {
   const { data } = await supabaseAdmin
@@ -88,6 +89,13 @@ export default async function BlogPostPage({
           {post.content}
         </ReactMarkdown>
       </div>
+
+      <hr className="border-gray-100 mb-8 mt-8" />
+
+      {/* Slideshow images */}
+      {post.images && post.images.length > 0 && (
+        <ImageSlideshow images={post.images} />
+      )}
     </main>
   );
 }
