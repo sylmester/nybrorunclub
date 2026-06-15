@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+import { Resend } from "resend";
+import { confirmationEmail } from "@/lib/confirmationEmail";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   const body = await req.json();
@@ -41,6 +45,37 @@ export async function POST(req: Request) {
 
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Fetch race details for the email
+  if (race_id) {
+    const { data: race } = await supabaseAdmin
+      .from("races")
+      .select("name, date, lap_distance_m")
+      .eq("id", race_id)
+      .single();
+
+    if (race) {
+      const distanceKm = `${((laps_count * race.lap_distance_m) / 1000).toFixed(0)} km`;
+      const raceDate = new Date(race.date).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      await resend.emails.send({
+        from: "no-reply@updates.nybrorunclub.dk",
+        to: email,
+        subject: `You're signed up for ${race.name}!`,
+        html: confirmationEmail({
+          name,
+          raceName: race.name,
+          raceDate,
+          distanceKm,
+        }),
+      });
+    }
+  }
+
   return NextResponse.json(data);
 }
 
