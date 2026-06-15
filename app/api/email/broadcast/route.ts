@@ -101,7 +101,7 @@ function broadcastEmail({
             <td style="padding:20px 40px;border-top:1px solid #f3f4f6;">
               <p style="margin:0;color:#9ca3af;font-size:12px;line-height:1.6;">
                 Nybrogård Løbeklub · nybrorunclub.dk<br>
-                Questions? Contact us at <a href="mailto:nybroloebeklub@gmail.com" style="color:#9ca3af;">nybroloebeklub@gmail.com</a>
+                Questions? Contact us at <a href="mailto:loebeklubben@nybro.dk" style="color:#9ca3af;">loebeklubben@nybro.dk</a>
               </p>
             </td>
           </tr>
