@@ -26,6 +26,7 @@ A web app for Nybrogård Løbeklub. Handles public race sign-up, live timing, re
 | Storage   | Supabase Storage (`blog-images` bucket)    |
 | Hosting   | Vercel                                     |
 | Domain    | nybrorunclub.dk (registered at Simply.com) |
+| Emails    | Resend                                     |
 
 ---
 
